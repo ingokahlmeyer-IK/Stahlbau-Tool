@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stahlbau Soll-Ist Vergleich</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --primary: #606566;
+    --mid: #717677;
+    --gold: #EAB312;
+    --red: #CC1135;
+    --text: #333333;
+    --light: #F4F4F4;
+    --white: #ffffff;
+    --green: #2d7a3a;
+    --orange: #d97706;
+    --bg: #1a1a1b;
+    --surface: #242526;
+    --surface2: #2d2e2f;
+    --border: #3a3b3c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: #e4e4e4;
+    min-height: 100vh;
+    font-size: 13px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--gold);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--white);
+  }
+  .logo-bar span { color: var(--gold); }
+  header .spacer { flex: 1; }
+  .header-info {
+    font-size: 11px;
+    color: #888;
+    text-align: right;
+  }
+
+  /* ── LAYOUT ── */
+  .app { display: flex; height: calc(100vh - 56px); }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sidebar-header h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+  .btn-new-project {
+    background: var(--gold);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-new-project:hover { opacity: 0.85; }
+  .project-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .project-item {
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .project-item:hover { background: var(--surface2); }
+  .project-item.active {
+    background: var(--surface2);
+    border-color: var(--gold);
+  }
+  .project-item .pname {
+    font-weight: 600;
+    color: var(--white);
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .project-item .pmeta {
+    font-size: 11px;
+    color: #666;
+    margin-top: 2px;
+  }
+  .project-item .pdel {
+    float: right;
+    color: #555;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+  }
+  .project-item .pdel:hover { color: var(--red); }
+
+  /* ── MAIN ── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── WELCOME ── */
+  .welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: #555;
+  }
+  .welcome h2 { font-size: 22px; color: #777; }
+  .welcome p { font-size: 14px; }
+
+  /* ── PROJECT VIEW ── */
+  .project-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .project-topbar {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .project-topbar h2 { font-size: 16px; font-weight: 700; color: var(--white); flex: 1; }
+  .project-topbar .pnr { font-size: 12px; color: var(--gold); font-weight: 600; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 10px 18px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #888;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: #ccc; }
+  .tab.active { color: var(--gold); border-bottom-color: var(--gold); font-weight: 600; }
+
+  /* ── TAB CONTENT ── */
+  .tab-content { flex: 1; overflow: auto; padding: 20px; }
+
+  /* ── SUMMARY CARDS ── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .card.gold-border { border-color: var(--gold); }
+  .card-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .card-value { font-size: 22px; font-weight: 700; color: var(--white); }
+  .card-unit { font-size: 12px; color: #888; margin-left: 4px; }
+  .card-sub { font-size: 11px; color: #666; margin-top: 4px; }
+  .card.pos { border-color: var(--green); }
+  .card.neg { border-color: var(--red); }
+  .card-value.pos { color: #4ade80; }
+  .card-value.neg { color: #f87171; }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-bar input, .filter-bar select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: #e4e4e4;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .filter-bar input:focus, .filter-bar select:focus { border-color: var(--gold); }
+  .filter-bar input { min-width: 200px; }
+  .filter-bar .filter-label { font-size: 12px; color: #666; }
+  .filter-count { margin-left: auto; font-size: 12px; color: #666; }
+
+  /* ── IMPORT BAR ── */
+  .import-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-gold { background: var(--gold); color: #000; }
+  .btn-gold:hover { opacity: 0.85; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: #aaa; }
+  .btn-ghost:hover { border-color: #888; color: #fff; }
+  .btn-danger { background: transparent; border: 1px solid var(--red); color: var(--red); }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    background: var(--primary);
+    color: var(--white);
+    padding: 9px 10px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+  thead th.num { text-align: right; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:hover { background: rgba(234,179,18,0.06); }
+  tbody tr.subtotal {
+    background: var(--surface2);
+    font-weight: 700;
+    color: var(--gold);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr.subtotal td { padding: 7px 10px; }
+  td { padding: 7px 10px; color: #d4d4d4; white-space: nowrap; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.profile-name { font-weight: 600; color: var(--white); }
+  td.ist-input input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 6px;
+    width: 80px;
+    font-size: 12px;
+    text-align: right;
+    outline: none;
+  }
+  td.ist-input input:focus { border-color: var(--gold); }
+  .tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .tag-profile { background: #1e3a5f; color: #60a5fa; }
+  .tag-blech { background: #3d2b00; color: #fbbf24; }
+  .tag-rohr { background: #1a3a2a; color: #4ade80; }
+  .tag-winkel { background: #3a1a2a; color: #f472b6; }
+  .tag-other { background: #2a2a2a; color: #888; }
+
+  /* ── DELTA ── */
+  .delta-pos { color: #4ade80; font-weight: 600; }
+  .delta-neg { color: #f87171; font-weight: 600; }
+  .delta-zero { color: #666; }
+  .ampel { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+  .ampel-green { background: #4ade80; }
+  .ampel-orange { background: #fb923c; }
+  .ampel-red { background: #f87171; }
+  .ampel-gray { background: #555; }
+
+  /* ── GRUPPENÜBERSICHT ── */
+  .group-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .group-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .group-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .group-card-title { font-weight: 700; font-size: 14px; color: var(--white); }
+  .progress-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+  .progress-fill.ok { background: #4ade80; }
+  .progress-fill.warn { background: #fb923c; }
+  .progress-fill.over { background: #f87171; }
+  .group-stats { display: flex; justify-content: space-between; font-size: 12px; color: #888; }
+  .group-stats strong { color: #ccc; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+  }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    width: 440px;
+    max-width: 95vw;
+  }
+  .modal h3 { font-size: 17px; font-weight: 700; color: var(--white); margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.6px; }
+  .form-group input, .form-group textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: #e4e4e4;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13px;
+    outline: none;
+    font-family: inherit;
+  }
+  .form-group input:focus, .form-group textarea:focus { border-color: var(--gold); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+
+  /* ── DRAG DROP ZONE ── */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 16px;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--gold);
+    background: rgba(234,179,18,0.05);
+  }
+  .drop-zone .dz-icon { font-size: 32px; margin-bottom: 8px; }
+  .drop-zone p { color: #666; font-size: 13px; }
+  .drop-zone strong { color: var(--gold); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 9999;
+    display: none;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .toast-success { background: #166534; color: #4ade80; border: 1px solid #4ade80; }
+  .toast-error { background: #7f1d1d; color: #fca5a5; border: 1px solid #fca5a5; }
+  .toast-info { background: #1e3a5f; color: #93c5fd; border: 1px solid #60a5fa; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #555;
+  }
+  .empty-state .es-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  .version-badge {
+    font-size: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: #555;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  .import-log {
+    font-size: 12px;
+    color: #888;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-radius: 6px;
+    margin-top: 8px;
+  }
+
+  .chip {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: #aaa;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .chip:hover, .chip.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 700; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+
+  .no-data { color: #555; font-style: italic; }
+
+  input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-bar">⚙ Stahl<span>bau</span> &nbsp;<span style="color:#777;font-weight:300">|</span>&nbsp; Soll-Ist Vergleich</div>
+  <div class="spacer"></div>
+  <div class="header-info">Hoffmeier Industrieanlagen<br>GmbH &amp; Co. KG</div>
+</header>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h3>Projekte</h3>
+      <button class="btn-new-project" onclick="openNewProjectModal()">+ Neu</button>
+    </div>
+    <div class="project-list" id="projectList"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="mainArea">
+    <div class="welcome">
+      <div style="font-size:48px;">🏗</div>
+      <h2>Projekt auswählen oder anlegen</h2>
+      <p>Wähle links ein Projekt oder erstelle ein neues mit „+ Neu"</p>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- HIDDEN FILE INPUT -->
+<input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileInput(event)">
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+let state = {
+  projects: {},      // { id: { id, name, nr, desc, lists: [], istData: {} } }
+  activeProject: null,
+  activeTab: 'vergleich',
+  fileInputMode: null,  // 'soll' | 'ist'
+  filterText: '',
+  filterGroup: 'all',
+  filterDelta: 'all',
+};
+
+// ─────────────────────────────────────────────
+//  PROFILE-GRUPPEN ERKENNUNG
+// ─────────────────────────────────────────────
+function detectGroup(profile) {
+  if (!profile) return 'Sonstiges';
+  const p = profile.toString().toUpperCase().trim();
+  if (/^BLECH|^PL|^FL/.test(p)) return 'Bleche';
+  if (/^HEA/.test(p)) return 'HEA';
+  if (/^HEB/.test(p)) return 'HEB';
+  if (/^HEM/.test(p)) return 'HEM';
+  if (/^IPE/.test(p)) return 'IPE';
+  if (/^UPE|^UNP/.test(p)) return 'U-Profile';
+  if (/^ROR|^RHS|^SHS|^CHS|^ROHR/.test(p)) return 'Rohre';
+  if (/^L[0-9]|^WIN/.test(p)) return 'Winkelstahl';
+  if (/^T[0-9]/.test(p)) return 'T-Stahl';
+  if (/^FLACH|^FB/.test(p)) return 'Flachstahl';
+  if (/^RUND|^RD/.test(p)) return 'Rundstahl';
+  return 'Sonstiges';
+}
+
+function groupTag(g) {
+  const map = {
+    'Bleche': 'blech', 'HEA': 'profile', 'HEB': 'profile', 'HEM': 'profile',
+    'IPE': 'profile', 'U-Profile': 'profile', 'Rohre': 'rohr',
+    'Winkelstahl': 'winkel', 'T-Stahl': 'profile', 'Flachstahl': 'profile', 'Rundstahl': 'rohr'
+  };
+  const cls = map[g] || 'other';
+  return `<span class="tag tag-${cls}">${g}</span>`;
+}
+
+// ─────────────────────────────────────────────
+//  PERSIST
+// ─────────────────────────────────────────────
+function save() {
+  try { localStorage.setItem('stahlbau_soll_ist', JSON.stringify(state.projects)); } catch(e) {}
+}
+function load() {
+  try {
+    const d = localStorage.getItem('stahlbau_soll_ist');
+    if (d) {
+      state.projects = JSON.parse(d);
+      // Bereinigung: Subtotals aus allItems entfernen (Altdaten-Fix)
+      for (const proj of Object.values(state.projects)) {
+        if (proj.allItems) {
+          proj.allItems = proj.allItems.filter(i => !i.isSubtotal);
+        }
+      }
+    }
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────────────
+//  XLSX COLUMN MATCHER
+// ─────────────────────────────────────────────
+function matchCol(headers, patterns) {
+  for (const p of patterns) {
+    const re = new RegExp(p, 'i');
+    const idx = headers.findIndex(h => re.test(String(h || '').replace(/:$/,'').trim()));
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+// Merge two header rows into one combined label per column
+function mergeHeaderRows(rowA, rowB) {
+  const len = Math.max(rowA.length, rowB.length);
+  const merged = [];
+  for (let i = 0; i < len; i++) {
+    const a = String(rowA[i] || '').trim().replace(/:$/,'');
+    const b = String(rowB[i] || '').trim().replace(/:$/,'');
+    merged.push(a && b ? `${a} ${b}` : a || b);
+  }
+  return merged;
+}
+
+// Score a row for being a header: returns 0–N based on keyword matches
+function headerScore(row) {
+  const keywords = /profil|profile|grade|güte|qty|stück|length|länge|weight|gewicht|area|fläche|comment|bemerk|level|ebene|sum|ges\.|menge|pcs/i;
+  return row.filter(c => typeof c === 'string' && keywords.test(String(c))).length;
+}
+
+function parseXLSX(data) {
+  const wb = XLSX.read(data, { type: 'array' });
+
+  // Try all sheets, pick first one with data
+  let rows = [];
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    const r = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: false });
+    if (r.length > 5) { rows = r; break; }
+  }
+  if (!rows.length) { showToast('Keine Daten in der Datei gefunden', 'error'); return []; }
+
+  // Find header row: scan first 25 rows, pick best scoring row
+  let bestRow = -1, bestScore = 0;
+  for (let i = 0; i < Math.min(25, rows.length); i++) {
+    const s = headerScore(rows[i]);
+    if (s > bestScore) { bestScore = s; bestRow = i; }
+  }
+  if (bestRow < 0 || bestScore < 1) {
+    showToast('Keine Spaltenüberschriften erkannt (0 Keyword-Treffer)', 'error');
+    return [];
+  }
+
+  // Check if next row also has header-like content (two-row header)
+  let headers;
+  const nextScore = bestRow + 1 < rows.length ? headerScore(rows[bestRow + 1]) : 0;
+  if (nextScore >= 2) {
+    headers = mergeHeaderRows(rows[bestRow], rows[bestRow + 1]);
+    bestRow++; // data starts after second header row
+  } else {
+    headers = rows[bestRow].map(h => String(h || '').trim().replace(/:$/,''));
+  }
+
+  // Debug: log detected headers to console
+  console.log('[Stahlbau] Header row', bestRow, ':', headers);
+
+  // Map columns — broad patterns, colon-stripped headers
+  const colProfile = matchCol(headers, ['profil', 'profile', 'bauteil', 'bezeich', 'description', 'item']);
+  const colGrade   = matchCol(headers, ['grade', 'güte', 'gute', 'stahl', 'quality', 'material', 'norm']);
+  const colQty     = matchCol(headers, ['qty', 'stück', 'stueck', 'menge', 'anz', 'count', 'pcs', 'number', 'anzahl']);
+  const colLen     = matchCol(headers, ['length mm', 'länge mm', 'length \\[mm', 'länge \\[mm', 'length$', 'länge$', 'len$']);
+  const colLenSum  = matchCol(headers, ['length sum', 'sum.*length', 'länge.*ges', 'ges.*länge', 'sum.*länge', 'length.*sum', 'längensum', 'total.*length']);
+  const colWgt     = matchCol(headers, ['weight kg', 'gewicht kg', 'weight \\[kg', 'gewicht \\[kg', 'weight$', 'gewicht$', 'wgt$', 'kg$']);
+  const colWgtSum  = matchCol(headers, ['weight sum', 'sum.*weight', 'gewicht.*sum', 'sum.*gewicht', 'gesamtgewicht', 'total.*weight', 'weight.*sum', 'wgt.*sum']);
+  const colArea    = matchCol(headers, ['area m', 'fläche m', 'area \\[m', 'fläche \\[m', 'area$', 'fläche$', 'surface$']);
+  const colAreaSum = matchCol(headers, ['area sum', 'sum.*area', 'fläche.*sum', 'sum.*fläche', 'gesamtfläche', 'total.*area', 'area.*sum']);
+  const colComment = matchCol(headers, ['comment', 'bemerk', 'notiz', 'hinweis', 'remark', 'note']);
+  const colLevel   = matchCol(headers, ['level', 'ebene', 'geschoss', 'etage', 'floor']);
+
+  console.log('[Stahlbau] Col mapping:', {colProfile, colGrade, colQty, colLen, colLenSum, colWgt, colWgtSum, colArea, colAreaSum});
+
+  if (colProfile < 0) {
+    showToast('Spalte "Profil/Profile" nicht gefunden — bitte Spaltenname prüfen', 'error');
+    return [];
+  }
+
+  const items = [];
+  for (let i = bestRow + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.every(c => c === '' || c === null || c === undefined)) continue;
+
+    const rawProfile = colProfile >= 0 ? String(r[colProfile] || '').trim() : '';
+    // Check all cells in row for "Total:" label (may be in a non-profile column)
+    const rowHasTotal = r.some(c => /^\s*total\s*:/i.test(String(c||'')));
+    if (!rawProfile && !rowHasTotal) continue;
+    if (!rawProfile && rowHasTotal) continue; // Total summary row — skip entirely
+    // Skip pure header/logo remnants
+    if (/^(title|date|rev|page|projekt|loesche|mta)/i.test(rawProfile)) continue;
+
+    const isSubtotal = /sub.?total|gesamt|summe|zwischensumme|^total/i.test(rawProfile) || rowHasTotal;
+
+    const qty     = parseFloat(String(r[colQty]||'').replace(',','.')) || 0;
+    const len     = parseFloat(String(r[colLen]||'').replace(',','.')) || 0;
+    const lenSum  = parseFloat(String(r[colLenSum]||'').replace(',','.')) || 0;
+    const wgt     = parseFloat(String(r[colWgt]||'').replace(',','.')) || 0;
+    const wgtSumRaw = parseFloat(String(r[colWgtSum]||'').replace(',','.'));
+    const wgtSum  = isNaN(wgtSumRaw) ? (wgt * Math.max(qty,1)) : wgtSumRaw;
+    const area    = parseFloat(String(r[colArea]||'').replace(',','.')) || 0;
+    const areaSumRaw = parseFloat(String(r[colAreaSum]||'').replace(',','.'));
+    const areaSum = isNaN(areaSumRaw) ? (area * Math.max(qty,1)) : areaSumRaw;
+    const grade   = colGrade >= 0 ? String(r[colGrade] || '').trim() : '';
+    const comment = colComment >= 0 ? String(r[colComment] || '').trim() : '';
+    const level   = colLevel >= 0 ? String(r[colLevel] || '').trim() : '';
+
+    items.push({
+      profile: rawProfile, grade, qty, len, lenSum, wgt, wgtSum, area, areaSum,
+      comment, level, isSubtotal, group: detectGroup(rawProfile),
+      rowNr: i,
+      // Stable ID: profile + grade + individual length + qty (no row number → survives re-import)
+      id: `${rawProfile}||${grade}||${len}||${qty}`
+    });
+  }
+
+  if (!items.length) {
+    showToast('Spalten erkannt, aber keine Datenzeilen — F12 Konsole für Details', 'error');
+  } else {
+    console.log('[Stahlbau] Parsed', items.length, 'items. First:', items[0]);
+  }
+  return items;
+}
+
+// Diagnose-Dialog: zeigt Rohinhalt der Datei
+function diagnoseXLSX(data, filename) {
+  const wb = XLSX.read(data, { type: 'array' });
+  let info = `<b>${filename}</b><br>Sheets: ${wb.SheetNames.join(', ')}<br><br>`;
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: false });
+  info += `Zeilen: ${rows.length}<br><br><b>Erste 12 Zeilen (Spalten A–L):</b>`;
+  info += `<div style="font-family:monospace;font-size:10px;margin-top:8px;overflow-x:auto;max-height:260px;overflow-y:auto;">`;
+  for (let i = 0; i < Math.min(12, rows.length); i++) {
+    const score = headerScore(rows[i]);
+    const cells = rows[i].slice(0,12).map(c => String(c||'').substring(0,16).padEnd(16,' ')).join('|');
+    info += `<div style="white-space:pre;color:${score>0?'#EAB312':'#888'}">Z${String(i+1).padStart(2,'0')}: ${cells}</div>`;
+  }
+  info += `</div><small style="color:#555">Gelb = Zeile mit Spalten-Schlüsselwörtern erkannt</small>`;
+  showModal(`<h3>🔍 Datei-Diagnose</h3><div style="font-size:12px;line-height:1.8;">${info}</div>
+    <div class="modal-actions"><button class="btn btn-gold" onclick="closeModal()">Schließen</button></div>`);
+}
+
+// ─────────────────────────────────────────────
+//  MERGE SOLL-LISTEN
+// ─────────────────────────────────────────────
+function mergeLists(existing, incoming) {
+  // Kumulativ: gleiche Position (profile+grade+len+qty) → aktualisieren, neue → hinzufügen
+  // Subtotals werden nie in allItems gespeichert
+  const map = new Map();
+  for (const item of existing.filter(i => !i.isSubtotal)) map.set(item.id, item);
+  let added = 0, updated = 0;
+  for (const item of incoming.filter(i => !i.isSubtotal)) {
+    if (map.has(item.id)) { map.set(item.id, item); updated++; }
+    else { map.set(item.id, item); added++; }
+  }
+  return { merged: Array.from(map.values()), added, updated };
+}
+
+// ─────────────────────────────────────────────
+//  PROJECT MANAGEMENT
+// ─────────────────────────────────────────────
+function openNewProjectModal() {
+  const id = Date.now().toString();
+  showModal(`
+    <h3>Neues Projekt anlegen</h3>
+    <div class="form-group">
+      <label>Projektnummer</label>
+      <input id="pnr" placeholder="z.B. 16068" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Projektname / Beschreibung</label>
+      <input id="pname" placeholder="z.B. Müs CS – Mill Reject Area" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Notiz (optional)</label>
+      <input id="pdesc" placeholder="Auftraggeber, Standort, …" autocomplete="off">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-gold" onclick="createProject('${id}')">Anlegen</button>
+    </div>
+  `);
+  setTimeout(() => document.getElementById('pnr')?.focus(), 50);
+}
+
+function createProject(id) {
+  const nr   = document.getElementById('pnr').value.trim();
+  const name = document.getElementById('pname').value.trim();
+  const desc = document.getElementById('pdesc').value.trim();
+  if (!name && !nr) { showToast('Bitte mindestens einen Namen oder eine Nummer eingeben', 'error'); return; }
+  state.projects[id] = { id, name: name || nr, nr, desc, lists: [], istData: {}, created: new Date().toLocaleDateString('de-DE') };
+  save();
+  closeModal();
+  renderSidebar();
+  selectProject(id);
+  showToast(`Projekt "${state.projects[id].name}" angelegt`, 'success');
+}
+
+function deleteProject(id, e) {
+  e.stopPropagation();
+  if (!confirm(`Projekt "${state.projects[id].name}" wirklich löschen?`)) return;
+  delete state.projects[id];
+  if (state.activeProject === id) {
+    state.activeProject = null;
+    renderMain();
+  }
+  save();
+  renderSidebar();
+}
+
+function selectProject(id) {
+  state.activeProject = id;
+  state.activeTab = 'vergleich';
+  state.filterText = '';
+  state.filterGroup = 'all';
+  state.filterDelta = 'all';
+  renderSidebar();
+  renderMain();
+}
+
+// ─────────────────────────────────────────────
+//  FILE HANDLING
+// ─────────────────────────────────────────────
+function exportVergleich() {
+  const proj = state.projects[state.activeProject];
+  const items = (proj.allItems || []).filter(i => !i.isSubtotal);
+  if (!items.length) { showToast('Keine Daten zum Exportieren', 'error'); return; }
+
+  const rows = [['Gruppe','Profil','Güte','Ebene','Soll Stk','Länge [mm]','Soll Gew. [kg]','Soll Fl. [m²]','Ist Stk','Ist Gew. [kg]','Ist Fl. [m²]','Δ Gew. [kg]','Δ [%]','Status','Kommentar']];
+  for (const item of items) {
+    const hi     = hasIstData(item, proj);
+    const istQty = getIstQty(item, proj);
+    const istW   = hi ? getIstWgt(item, proj) : '';
+    const istA   = hi ? getIstArea(item, proj) : '';
+    const d      = hi ? istW - item.wgtSum : '';
+    const dpct   = hi && item.wgtSum ? (d / item.wgtSum * 100) : '';
+    const status = hi ? (Math.abs(dpct) <= 5 ? 'OK' : Math.abs(dpct) <= 15 ? 'Warnung' : 'Kritisch') : '—';
+    rows.push([
+      item.group, item.profile, item.grade, item.level,
+      item.qty, item.len, item.wgtSum, item.areaSum,
+      hi ? istQty : '', hi ? istW : '', hi ? istA : '',
+      hi ? d : '', hi ? dpct : '',
+      status, item.comment
+    ]);
+  }
+  // Group subtotals
+  const groups = {};
+  for (const item of items) {
+    if (!groups[item.group]) groups[item.group] = { sollWgt: 0, sollArea: 0, istWgt: 0, istArea: 0, count: 0, hasIst: false };
+    groups[item.group].sollWgt  += item.wgtSum  || 0;
+    groups[item.group].sollArea += item.areaSum || 0;
+    groups[item.group].count++;
+    if (hasIstData(item, proj)) {
+      groups[item.group].istWgt  += getIstWgt(item, proj)  || 0;
+      groups[item.group].istArea += getIstArea(item, proj) || 0;
+      groups[item.group].hasIst = true;
+    }
+  }
+  rows.push([]);
+  rows.push(['GRUPPENÜBERSICHT','','','','','','Soll Gew. [kg]','Soll Fl. [m²]','','Ist Gew. [kg]','Ist Fl. [m²]','Δ [kg]','Δ [%]','','']);
+  for (const [g, v] of Object.entries(groups)) {
+    const d    = v.hasIst ? v.istWgt - v.sollWgt : '';
+    const dpct = v.hasIst && v.sollWgt ? d/v.sollWgt*100 : '';
+    rows.push([g,'','','',v.count,'',v.sollWgt, v.sollArea,'', v.hasIst?v.istWgt:'', v.hasIst?v.istArea:'', v.hasIst?d:'', v.hasIst?dpct:'','','']);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [12,16,10,10,5,12,16,16,12,10,10,20].map(w=>({wch:w}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Soll-Ist-Vergleich');
+  const fname = `SollIst_${proj.nr||proj.name}_${new Date().toLocaleDateString('de-DE').replace(/\./g,'-')}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  showToast(`✓ Export: ${fname}`, 'success');
+}
+
+function triggerDiagnose() {
+  state.fileInputMode = 'diagnose';
+  document.getElementById('fileInput').click();
+}
+
+function triggerFileInput(mode) {
+  state.fileInputMode = mode;
+  document.getElementById('fileInput').click();
+}
+
+function handleFileInput(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const data = new Uint8Array(ev.target.result);
+    if (state.fileInputMode === 'diagnose') { diagnoseXLSX(data, file.name); return; }
+    const items = parseXLSX(data);
+    if (!items.length) {
+      diagnoseXLSX(data, file.name);
+      return;
+    }
+
+    const proj = state.projects[state.activeProject];
+    if (state.fileInputMode === 'soll') {
+      const existing = proj.allItems || [];
+      const { merged, added, updated } = mergeLists(existing, items);
+      proj.lists.push({ filename: file.name, date: new Date().toLocaleDateString('de-DE'), itemCount: items.filter(i=>!i.isSubtotal).length });
+      proj.allItems = merged;
+      save();
+      renderMain();
+      showToast(`✓ ${file.name}: ${added} neu, ${updated} aktualisiert (${merged.length} Pos. gesamt)`, 'success');
+    } else {
+      // IST-Import: Ist-Stückzahl aus einer Ist-Liste einlesen
+      for (const item of items) {
+        if (!proj.istData[item.id]) proj.istData[item.id] = {};
+        proj.istData[item.id].istQty = item.qty; // Qty aus Ist-Liste
+      }
+      save();
+      renderMain();
+      showToast(`✓ Ist-Daten aus ${file.name} eingelesen (${items.length} Positionen)`, 'success');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function handleDropSoll(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  state.fileInputMode = 'soll';
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const data = new Uint8Array(ev.target.result);
+    const items = parseXLSX(data);
+    if (!items.length) { diagnoseXLSX(data, file.name); return; }
+    const proj = state.projects[state.activeProject];
+    const existing = proj.allItems || [];
+    const { merged, added, updated } = mergeLists(existing, items);
+    proj.lists.push({ filename: file.name, date: new Date().toLocaleDateString('de-DE'), itemCount: items.filter(i=>!i.isSubtotal).length });
+    proj.allItems = merged;
+    save();
+    renderMain();
+    showToast(`✓ ${file.name}: ${added} neu, ${updated} aktualisiert (${merged.length} Pos. gesamt)`, 'success');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─────────────────────────────────────────────
+//  IST-WERT SPEICHERN (manuell)
+// ─────────────────────────────────────────────
+function saveIstQty(itemId, value) {
+  const proj = state.projects[state.activeProject];
+  if (!proj.istData[itemId]) proj.istData[itemId] = {};
+  const v = parseFloat(String(value).replace(',','.'));
+  if (isNaN(v) || value === '') {
+    delete proj.istData[itemId].istQty;
+  } else {
+    proj.istData[itemId].istQty = v;
+  }
+  save();
+  renderTab();
+}
+
+// ─────────────────────────────────────────────
+//  RENDER SIDEBAR
+// ─────────────────────────────────────────────
+function renderSidebar() {
+  const el = document.getElementById('projectList');
+  const pids = Object.keys(state.projects);
+  if (!pids.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:30px 10px;font-size:12px;color:#555;">Noch keine Projekte.<br>Klicke auf „+ Neu".</div>`;
+    return;
+  }
+  el.innerHTML = pids.map(id => {
+    const p = state.projects[id];
+    const active = id === state.activeProject ? ' active' : '';
+    const listCount = p.lists ? p.lists.length : 0;
+    return `<div class="project-item${active}" onclick="selectProject('${id}')">
+      <span class="pdel" onclick="deleteProject('${id}',event)" title="Löschen">✕</span>
+      <div class="pname">${p.nr ? `[${p.nr}] ` : ''}${p.name}</div>
+      <div class="pmeta">${listCount} Listen · ${p.created || ''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+//  RENDER MAIN
+// ─────────────────────────────────────────────
+function renderMain() {
+  const main = document.getElementById('mainArea');
+  if (!state.activeProject || !state.projects[state.activeProject]) {
+    main.innerHTML = `<div class="welcome"><div style="font-size:48px;">🏗</div><h2>Projekt auswählen oder anlegen</h2><p>Wähle links ein Projekt oder erstelle ein neues mit „+ Neu"</p></div>`;
+    return;
+  }
+  const proj = state.projects[state.activeProject];
+  main.innerHTML = `
+    <div class="project-view">
+      <div class="project-topbar">
+        <div>
+          ${proj.nr ? `<div class="pnr">Projekt ${proj.nr}</div>` : ''}
+          <h2>${proj.name}</h2>
+          ${proj.desc ? `<div style="font-size:12px;color:#666;margin-top:2px;">${proj.desc}</div>` : ''}
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+          <span class="version-badge">${(proj.allItems||[]).filter(i=>!i.isSubtotal).length} Positionen</span>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab ${state.activeTab==='vergleich'?'active':''}" onclick="switchTab('vergleich')">⚖ Soll-Ist Vergleich</div>
+        <div class="tab ${state.activeTab==='gruppen'?'active':''}" onclick="switchTab('gruppen')">📊 Gruppen</div>
+        <div class="tab ${state.activeTab==='listen'?'active':''}" onclick="switchTab('listen')">📂 Listen</div>
+      </div>
+      <div class="tab-content" id="tabContent"></div>
+    </div>
+  `;
+  renderTab();
+}
+
+function switchTab(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => { if (t.textContent.toLowerCase().includes(tab.substring(0,4))) t.classList.add('active'); });
+  renderTab();
+}
+
+function renderTab() {
+  const tc = document.getElementById('tabContent');
+  if (!tc) return;
+  if (state.activeTab === 'vergleich') renderVergleich(tc);
+  else if (state.activeTab === 'gruppen') renderGruppen(tc);
+  else renderListen(tc);
+}
+
+// ─────────────────────────────────────────────
+//  TAB: VERGLEICH
+// ─────────────────────────────────────────────
+function renderVergleich(tc) {
+  const proj = state.projects[state.activeProject];
+  const items = (proj.allItems || []).filter(i => !i.isSubtotal);
+
+  // Collect groups
+  const groups = ['all', ...new Set(items.map(i => i.group))].sort();
+
+  // Filter
+  let filtered = items;
+  if (state.filterGroup !== 'all') filtered = filtered.filter(i => i.group === state.filterGroup);
+  if (state.filterText) {
+    const q = state.filterText.toLowerCase();
+    filtered = filtered.filter(i =>
+      i.profile.toLowerCase().includes(q) ||
+      i.grade.toLowerCase().includes(q) ||
+      i.level.toLowerCase().includes(q) ||
+      i.comment.toLowerCase().includes(q)
+    );
+  }
+  if (state.filterDelta === 'ok') filtered = filtered.filter(i => getDeltaPct(i, proj) >= -5);
+  else if (state.filterDelta === 'warn') filtered = filtered.filter(i => { const d = getDeltaPct(i,proj); return d < -5 && d >= -15; });
+  else if (state.filterDelta === 'red') filtered = filtered.filter(i => getDeltaPct(i,proj) < -15);
+  else if (state.filterDelta === 'over') filtered = filtered.filter(i => getDeltaPct(i,proj) > 5);
+
+  // Summaries
+  const sollWgtTotal  = items.reduce((s,i) => s + (i.wgtSum||0), 0);
+  const sollAreaTotal = items.reduce((s,i) => s + (i.areaSum||0), 0);
+  const istItems      = items.filter(i => hasIstData(i, proj));
+  const istWgtTotal   = istItems.reduce((s,i) => s + (getIstWgt(i,proj)||0), 0);
+  const istAreaTotal  = istItems.reduce((s,i) => s + (getIstArea(i,proj)||0), 0);
+  const deltaWgt      = istItems.length ? istWgtTotal - sollWgtTotal : null;
+  const deltaWgtPct   = sollWgtTotal && deltaWgt!==null ? (deltaWgt/sollWgtTotal*100) : null;
+  const hasAnyIst     = istItems.length > 0;
+
+  tc.innerHTML = `
+    <div class="summary-grid" id="summaryGrid">
+      <div class="card gold-border">
+        <div class="card-label">Soll Gewicht</div>
+        <div class="card-value">${fmt(sollWgtTotal/1000)}<span class="card-unit">t</span></div>
+        <div class="card-sub">${fmt(sollWgtTotal)} kg · ${items.length} Pos.</div>
+      </div>
+      <div class="card gold-border">
+        <div class="card-label">Soll Fläche</div>
+        <div class="card-value">${fmt(sollAreaTotal)}<span class="card-unit">m²</span></div>
+        <div class="card-sub">Gesamt Oberfläche</div>
+      </div>
+      <div class="card ${hasAnyIst?'':''}">
+        <div class="card-label">Ist Gewicht</div>
+        <div class="card-value">${hasAnyIst?fmt(istWgtTotal/1000)+'<span class="card-unit">t</span>':'<span style="color:#555;font-size:16px;">Noch keine Ist-Stückzahlen</span>'}</div>
+        <div class="card-sub">${hasAnyIst?fmt(istWgtTotal)+' kg · '+istItems.length+' Pos. erfasst':'Stückzahlen in Tabelle eintragen'}</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Ist Fläche</div>
+        <div class="card-value">${hasAnyIst?fmt(istAreaTotal)+'<span class="card-unit">m²</span>':'<span style="color:#555;font-size:16px;">—</span>'}</div>
+        <div class="card-sub">${hasAnyIst?'Errechnet aus Ist-Stückzahlen':''}</div>
+      </div>
+      <div class="card ${deltaWgt===null?'':deltaWgt<0?'neg':'pos'}">
+        <div class="card-label">Delta Gewicht</div>
+        <div class="card-value ${deltaWgt===null?'delta-zero':deltaWgt<0?'neg':'pos'}">${deltaWgt===null?'—':(deltaWgt>=0?'+':'')+fmt(deltaWgt/1000)+'<span class="card-unit">t</span>'}</div>
+        <div class="card-sub">${deltaWgtPct!==null?(deltaWgtPct>=0?'+':'')+deltaWgtPct.toFixed(1)+'%':''}</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Positionen</div>
+        <div class="card-value">${filtered.length}</div>
+        <div class="card-sub">${istItems.length} von ${items.length} erfasst</div>
+      </div>
+    </div>
+
+    <div class="import-bar">
+      <button class="btn btn-gold" onclick="triggerFileInput('soll')">📥 Soll-Liste importieren</button>
+      <button class="btn btn-ghost" onclick="triggerFileInput('ist')">📥 Ist-Liste importieren</button>
+      <button class="btn btn-ghost btn-sm" onclick="triggerDiagnose()" title="Datei analysieren ohne Import">🔍 Diagnose</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportVergleich()" title="Soll-Ist-Vergleich als XLSX exportieren">📤 Export XLSX</button>
+      <div style="flex:1"></div>
+    </div>
+
+    <div class="chip-row">
+      ${groups.map(g => `<span class="chip ${state.filterGroup===g?'active':''}" onclick="setFilterGroup('${g}')">${g==='all'?'Alle Gruppen':g}</span>`).join('')}
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" placeholder="🔍 Suche nach Profil, Güte, Ebene …"
+        value="${state.filterText}"
+        oninput="state.filterText=this.value;renderTab()">
+      <select onchange="state.filterDelta=this.value;renderTab()">
+        <option value="all" ${state.filterDelta==='all'?'selected':''}>Alle Abweichungen</option>
+        <option value="ok"   ${state.filterDelta==='ok'?'selected':''}>✅ OK (≤5%)</option>
+        <option value="warn" ${state.filterDelta==='warn'?'selected':''}>⚠ Warnung (5–15%)</option>
+        <option value="red"  ${state.filterDelta==='red'?'selected':''}>🔴 Kritisch (>15%)</option>
+        <option value="over" ${state.filterDelta==='over'?'selected':''}>⬆ Überschuss (>5%)</option>
+      </select>
+      <span class="filter-count">${filtered.length} Positionen angezeigt</span>
+    </div>
+
+    ${filtered.length === 0 ? `<div class="empty-state"><div class="es-icon">🔍</div><p>Keine Positionen gefunden.<br>${items.length===0?'Importiere zunächst eine Soll-Liste.':'Filterkriterien anpassen.'}</p></div>` : `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Gruppe</th>
+            <th>Profil</th>
+            <th>Güte</th>
+            ${filtered.some(i=>i.level)?'<th>Ebene</th>':''}
+            <th class="num">Soll Stk</th>
+            <th class="num">Länge [mm]</th>
+            <th class="num">Soll Gew. [kg]</th>
+            <th class="num">Soll Fl. [m²]</th>
+            <th class="num" style="background:#1a2a1a;color:#86efac;">Ist Stk ✎</th>
+            <th class="num" style="background:#1a2a1a;color:#86efac;">Ist Gew. [kg]</th>
+            <th class="num" style="background:#1a2a1a;color:#86efac;">Ist Fl. [m²]</th>
+            <th class="num">Δ Gew. [kg]</th>
+            <th class="num">Δ [%]</th>
+            <th>Status</th>
+            ${filtered.some(i=>i.comment)?'<th>Kommentar</th>':''}
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.map(item => {
+            const istQty  = getIstQty(item, proj);
+            const istW    = getIstWgt(item, proj);
+            const istA    = getIstArea(item, proj);
+            const hi      = hasIstData(item, proj);
+            const dW      = hi ? istW - item.wgtSum : null;
+            const dpct    = hi && item.wgtSum ? dW/item.wgtSum*100 : null;
+            const showLevel   = filtered.some(i=>i.level);
+            const showComment = filtered.some(i=>i.comment);
+            return `<tr>
+              <td>${groupTag(item.group)}</td>
+              <td class="profile-name">${item.profile}</td>
+              <td>${item.grade || '<span class="no-data">—</span>'}</td>
+              ${showLevel ? `<td>${item.level || '<span class="no-data">—</span>'}</td>` : ''}
+              <td class="num">${item.qty||'—'}</td>
+              <td class="num">${item.len ? Math.round(item.len).toLocaleString('de-DE') : '—'}</td>
+              <td class="num">${fmt(item.wgtSum)}</td>
+              <td class="num">${item.areaSum ? fmt(item.areaSum) : '—'}</td>
+              <td class="ist-input" style="background:rgba(74,222,128,0.05);">
+                <input type="number" step="1" min="0"
+                  value="${istQty !== null ? istQty : ''}"
+                  placeholder="${item.qty}"
+                  onchange="saveIstQty('${item.id}',this.value)"
+                  title="Ist-Stückzahl eingeben (Soll: ${item.qty} Stk)">
+              </td>
+              <td class="num" style="background:rgba(74,222,128,0.05);">${hi ? fmt(istW) : '<span class="no-data">—</span>'}</td>
+              <td class="num" style="background:rgba(74,222,128,0.05);">${hi && istA !== null ? fmt(istA) : '<span class="no-data">—</span>'}</td>
+              <td class="num ${dW===null?'delta-zero':dW>=0?'delta-pos':'delta-neg'}">${dW!==null?(dW>=0?'+':'')+fmt(dW):'—'}</td>
+              <td class="num ${dpct===null?'delta-zero':dpct>=0?'delta-pos':'delta-neg'}">${dpct!==null?(dpct>=0?'+':'')+dpct.toFixed(1)+'%':'—'}</td>
+              <td>${hi?ampel(dpct):'<span class="ampel ampel-gray"></span> —'}</td>
+              ${showComment ? `<td style="color:#666;max-width:140px;white-space:normal;">${item.comment||''}</td>` : ''}
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  `;
+}
+
+function getIstQty(item, proj) {
+  // Ist-Stückzahl: manuell eingetragen oder per Import
+  const d = proj.istData[item.id];
+  return (d && d.istQty !== undefined) ? d.istQty : null; // null = noch nicht erfasst
+}
+
+function getIstWgt(item, proj) {
+  const istQty = getIstQty(item, proj);
+  if (istQty === null) return null;
+  // Einzelgewicht = wgt (aus Soll-Liste, Weight[kg] pro Stück)
+  // Falls wgt nicht direkt vorliegt, aus wgtSum / qty ableiten
+  const wgtEach = item.wgt || (item.qty ? item.wgtSum / item.qty : 0);
+  return istQty * wgtEach;
+}
+
+function getIstArea(item, proj) {
+  const istQty = getIstQty(item, proj);
+  if (istQty === null) return null;
+  const areaEach = item.area || (item.qty ? item.areaSum / item.qty : 0);
+  return istQty * areaEach;
+}
+
+function hasIstData(item, proj) {
+  return getIstQty(item, proj) !== null;
+}
+
+function getDeltaPct(item, proj) {
+  if (!hasIstData(item, proj)) return 0;
+  const istW = getIstWgt(item, proj);
+  return item.wgtSum ? (istW - item.wgtSum) / item.wgtSum * 100 : 0;
+}
+
+function ampel(dpct) {
+  if (Math.abs(dpct) <= 5) return '<span class="ampel ampel-green"></span> OK';
+  if (dpct < -15 || dpct > 15) return '<span class="ampel ampel-red"></span> Kritisch';
+  return '<span class="ampel ampel-orange"></span> Warnung';
+}
+
+function setFilterGroup(g) {
+  state.filterGroup = g;
+  renderTab();
+}
+
+function recalcSummary() {
+  renderTab();
+}
+
+// ─────────────────────────────────────────────
+//  TAB: GRUPPEN
+// ─────────────────────────────────────────────
+function renderGruppen(tc) {
+  const proj = state.projects[state.activeProject];
+  const items = (proj.allItems || []).filter(i => !i.isSubtotal);
+  if (!items.length) {
+    tc.innerHTML = `<div class="empty-state"><div class="es-icon">📊</div><p>Keine Daten. Importiere zunächst eine Soll-Liste.</p></div>`;
+    return;
+  }
+
+  // Group by group name
+  const groupMap = {};
+  for (const item of items) {
+    if (!groupMap[item.group]) groupMap[item.group] = { items: [], sollWgt: 0, sollArea: 0, istWgt: 0, istArea: 0, hasIst: false };
+    groupMap[item.group].items.push(item);
+    groupMap[item.group].sollWgt  += item.wgtSum  || 0;
+    groupMap[item.group].sollArea += item.areaSum || 0;
+    if (hasIstData(item, proj)) {
+      groupMap[item.group].istWgt  += getIstWgt(item, proj)  || 0;
+      groupMap[item.group].istArea += getIstArea(item, proj) || 0;
+      groupMap[item.group].hasIst = true;
+    }
+  }
+
+  const totalSollWgt  = Object.values(groupMap).reduce((s,g)=>s+g.sollWgt, 0);
+  const totalSollArea = Object.values(groupMap).reduce((s,g)=>s+g.sollArea, 0);
+
+  tc.innerHTML = `
+    <div class="group-grid">
+      ${Object.entries(groupMap).sort((a,b)=>b[1].sollWgt-a[1].sollWgt).map(([name, g]) => {
+        const pct = g.hasIst && g.sollWgt ? g.istWgt/g.sollWgt*100 : 0;
+        const d = g.hasIst ? g.istWgt - g.sollWgt : null;
+        const anteil = totalSollWgt ? g.sollWgt/totalSollWgt*100 : 0;
+        const fillClass = !g.hasIst ? '' : Math.abs(pct-100)<=5 ? 'ok' : Math.abs(pct-100)<=15 ? 'warn' : 'over';
+        return `
+          <div class="group-card" onclick="setFilterGroup('${name}');switchTab('vergleich')" style="cursor:pointer" title="Zur Positionsliste für ${name}">
+            <div class="group-card-header">
+              <div class="group-card-title">${name}</div>
+              ${groupTag(name)}
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill ${fillClass}" style="width:${Math.min(pct,100)}%"></div>
+            </div>
+            <div class="group-stats">
+              <div>Soll: <strong>${fmt(g.sollWgt/1000)} t</strong></div>
+              <div>Ist: <strong>${g.hasIst?fmt(g.istWgt/1000)+' t':'—'}</strong></div>
+              <div>Δ: <strong class="${d===null?'':d<0?'delta-neg':'delta-pos'}">${d!==null?(d>=0?'+':'')+fmt(d/1000)+' t':'—'}</strong></div>
+            </div>
+            <div class="group-stats" style="margin-top:4px;">
+              <div>Fläche Soll: <strong>${fmt(g.sollArea)} m²</strong></div>
+              <div>${g.hasIst?'Ist: <strong>'+fmt(g.istArea)+' m²</strong>':''}</div>
+            </div>
+            <div class="group-stats" style="margin-top:6px;">
+              <div style="color:#555">${g.items.length} Pos. · ${anteil.toFixed(1)}% Gewichtsanteil</div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <table>
+        <thead>
+          <tr>
+            <th>Profilgruppe</th>
+            <th class="num">Pos.</th>
+            <th class="num">Soll [t]</th>
+            <th class="num">Soll Fl. [m²]</th>
+            <th class="num">Ist [t]</th>
+            <th class="num">Ist Fl. [m²]</th>
+            <th class="num">Δ Gew. [kg]</th>
+            <th class="num">Δ [%]</th>
+            <th class="num">Gew.-Anteil</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Object.entries(groupMap).sort((a,b)=>b[1].sollWgt-a[1].sollWgt).map(([name, g]) => {
+            const d = g.hasIst ? g.istWgt - g.sollWgt : null;
+            const dpct = g.sollWgt && d!==null ? d/g.sollWgt*100 : null;
+            const anteil = totalSollWgt ? g.sollWgt/totalSollWgt*100 : 0;
+            return `<tr>
+              <td class="profile-name">${name}</td>
+              <td class="num">${g.items.length}</td>
+              <td class="num">${fmt(g.sollWgt/1000)}</td>
+              <td class="num">${fmt(g.sollArea)}</td>
+              <td class="num">${g.hasIst?fmt(g.istWgt/1000):'—'}</td>
+              <td class="num">${g.hasIst?fmt(g.istArea):'—'}</td>
+              <td class="num ${d===null?'delta-zero':d<0?'delta-neg':'delta-pos'}">${d!==null?(d>=0?'+':'')+fmt(d):'—'}</td>
+              <td class="num ${dpct===null?'delta-zero':dpct<0?'delta-neg':'delta-pos'}">${dpct!==null?(dpct>=0?'+':'')+dpct.toFixed(1)+'%':'—'}</td>
+              <td class="num">${anteil.toFixed(1)}%</td>
+            </tr>`;
+          }).join('')}
+          <tr class="subtotal">
+            <td>GESAMT</td>
+            <td class="num">${items.length}</td>
+            <td class="num">${fmt(totalSollWgt/1000)}</td>
+            <td class="num">${fmt(totalSollArea)}</td>
+            <td class="num">${Object.values(groupMap).some(g=>g.hasIst)?fmt(Object.values(groupMap).reduce((s,g)=>s+g.istWgt,0)/1000):'—'}</td>
+            <td class="num">${Object.values(groupMap).some(g=>g.hasIst)?fmt(Object.values(groupMap).reduce((s,g)=>s+g.istArea,0)):'—'}</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">100%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ─────────────────────────────────────────────
+//  TAB: LISTEN
+// ─────────────────────────────────────────────
+function renderListen(tc) {
+  const proj = state.projects[state.activeProject];
+  const lists = proj.lists || [];
+
+  tc.innerHTML = `
+    <div style="max-width:700px;">
+      <div class="import-bar" style="margin-bottom:24px;">
+        <div
+          class="drop-zone"
+          style="width:100%"
+          ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="handleDropSoll(event)"
+          onclick="triggerFileInput('soll')">
+          <div class="dz-icon">📋</div>
+          <p>Soll-Liste per <strong>Drag &amp; Drop</strong> hier ablegen<br>oder klicken zum Auswählen</p>
+          <p style="margin-top:8px;font-size:11px;color:#444;">XLSX · beliebige Spaltenanordnung wird erkannt</p>
+        </div>
+      </div>
+
+      <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#666;margin-bottom:12px;">Importierte Soll-Listen (${lists.length})</h4>
+
+      ${lists.length === 0 ? '<p style="color:#555;font-style:italic;">Noch keine Listen importiert.</p>' :
+        lists.map((l, i) => `
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;">
+            <div style="font-size:20px;">📄</div>
+            <div style="flex:1;">
+              <div style="font-weight:600;color:#e4e4e4;">${l.filename}</div>
+              <div style="font-size:11px;color:#666;">${l.date} · ${l.itemCount} Zeilen</div>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="removeList(${i})">Entfernen</button>
+          </div>
+        `).join('')
+      }
+
+      <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:20px;">
+        <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#666;margin-bottom:12px;">Ist-Zustand</h4>
+        <p style="color:#777;font-size:13px;margin-bottom:12px;">
+          Ist-Werte können direkt in der Vergleichstabelle eingetragen oder als XLSX importiert werden.
+        </p>
+        <button class="btn btn-ghost" onclick="triggerFileInput('ist')">📥 Ist-Liste importieren (XLSX)</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:10px;" onclick="clearIst()">Ist-Daten löschen</button>
+      </div>
+    </div>
+  `;
+}
+
+function removeList(idx) {
+  const proj = state.projects[state.activeProject];
+  proj.lists.splice(idx, 1);
+  if (proj.lists.length === 0) proj.allItems = [];
+  save();
+  renderTab();
+  showToast('Liste entfernt', 'info');
+}
+
+function clearIst() {
+  if (!confirm('Alle Ist-Daten löschen?')) return;
+  state.projects[state.activeProject].istData = {};
+  save();
+  renderTab();
+  showToast('Ist-Daten gelöscht', 'info');
+}
+
+// ─────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────
+function fmt(v) {
+  if (isNaN(v) || v === null || v === undefined) return '0';
+  return v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.className = `toast-${type}`;
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+function showModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').style.display = 'flex';
+}
+function closeModal() {
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+load();
+renderSidebar();
+// Restore last active project
+const pids = Object.keys(state.projects);
+if (pids.length > 0) selectProject(pids[pids.length - 1]);
+</script>
+</body>
+</html>
