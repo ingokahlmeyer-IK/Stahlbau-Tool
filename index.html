@@ -6,258 +6,238 @@
 <title>Stahlbau Kontroll-App</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --gold:#EAB312;--red:#CC1135;--bg:#1a1a1b;--sur:#242526;--sur2:#2d2e2f;
-  --bor:#3a3b3c;--bor2:#4a4b4c;--txt:#e4e4e4;--grn:#4ade80;--blu:#818cf8;--ros:#f87171;
-}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:13px}
-::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bor2);border-radius:3px}
-button,input{font-family:inherit;cursor:pointer}
-input{cursor:text}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--gold:#EAB312;--red:#CC1135;--bg:#1a1a1b;--s1:#242526;--s2:#2d2e2f;--b1:#3a3b3c;--b2:#4a4b4c;--grn:#4ade80;--blu:#818cf8;--ros:#f87171}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#e4e4e4;height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:13px}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
 
 /* HEADER */
-#hdr{height:52px;border-bottom:2px solid var(--gold);background:var(--sur);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
-#hdr .logo{font-weight:900;font-size:16px}#hdr .logo span{color:var(--gold)}
-#hdr .sub{margin-left:auto;font-size:10px;color:#555;text-align:right;line-height:1.4}
+#hdr{height:50px;background:var(--s1);border-bottom:2px solid var(--gold);display:flex;align-items:center;padding:0 18px;flex-shrink:0}
+#hdr .logo{font-weight:900;font-size:16px}
+#hdr .logo em{color:var(--gold);font-style:normal}
+#hdr .sub{margin-left:auto;font-size:10px;color:#555;text-align:right;line-height:1.5}
 
-/* APP LAYOUT */
-#app{display:flex;height:calc(100vh - 52px);overflow:hidden}
+/* LAYOUT */
+#app{display:flex;height:calc(100vh - 50px);overflow:hidden}
 
 /* SIDEBAR */
-#sidebar{width:220px;min-width:220px;background:var(--sur);border-right:1px solid var(--bor);display:flex;flex-direction:column}
-#sb-head{padding:10px 14px;border-bottom:1px solid var(--bor);display:flex;align-items:center;justify-content:space-between}
-#sb-head h3{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#555;font-weight:700}
-.btn-new{background:var(--gold);color:#000;border:none;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:800}
-.btn-new:hover{opacity:.85}
-#proj-list{flex:1;overflow-y:auto;padding:6px}
-.pi{display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:7px;margin-bottom:2px;cursor:pointer;border:1px solid transparent;transition:all .12s}
-.pi:hover{background:var(--sur2)}
-.pi.active{background:var(--sur2);border-color:var(--gold)}
-.pi .pn{font-weight:600;color:#fff;font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pi .pd{background:none;border:none;color:#555;font-size:13px;padding:2px 4px;border-radius:3px;line-height:1;flex-shrink:0}
-.pi .pd:hover{background:rgba(204,17,53,.2);color:var(--red)}
+#sb{width:210px;min-width:210px;background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column}
+#sb-hd{padding:10px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between}
+#sb-hd h3{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#555;font-weight:700}
+#sb-hd button{background:var(--gold);color:#000;border:none;border-radius:4px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer}
+#sb-hd button:hover{opacity:.85}
+#plist{flex:1;overflow-y:auto;padding:5px}
+.pitem{display:flex;align-items:center;gap:5px;padding:8px 9px;border-radius:6px;margin-bottom:2px;cursor:pointer;border:1px solid transparent}
+.pitem:hover{background:var(--s2)}
+.pitem.on{background:var(--s2);border-color:var(--gold)}
+.pitem .pn{flex:1;font-weight:600;color:#fff;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitem .pd{background:none;border:none;color:#666;font-size:13px;padding:1px 5px;border-radius:3px;cursor:pointer;line-height:1;flex-shrink:0}
+.pitem .pd:hover{background:rgba(204,17,53,.25);color:var(--red)}
 
 /* MAIN */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-#pbar{padding:8px 18px;border-bottom:1px solid var(--bor);background:var(--sur);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-#pbar .left .nr{font-size:10px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px}
-#pbar .left h2{font-size:15px;font-weight:800;color:#fff}
-#pbar .right{display:flex;gap:8px;align-items:center}
 
-/* SCROLL AREA */
-#scroll{flex:1;overflow-y:auto;padding:14px 18px;background:var(--bg)}
+/* PROJECT BAR */
+#pb{padding:8px 16px;background:var(--s1);border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#pb .l .nr{font-size:10px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.6px}
+#pb .l h2{font-size:14px;font-weight:800;color:#fff}
+#pb .r{display:flex;gap:8px;align-items:center}
+.btn-del{background:rgba(204,17,53,.1);border:1px solid rgba(204,17,53,.4);color:#fca5a5;border-radius:5px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer}
+.btn-del:hover{background:rgba(204,17,53,.25)}
 
-/* STAT CARDS */
-#stats{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:14px}
-.sc{background:var(--sur);border:1px solid var(--bor);border-radius:7px;padding:9px 11px;text-align:center}
-.sc .sl{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:#555;font-weight:700;margin-bottom:3px}
-.sc .sv{font-size:15px;font-weight:800;color:#fff}
-.sc .ss{font-size:9px;color:#555;margin-top:2px}
-.sv.grn{color:var(--grn)}.sv.blu{color:var(--blu)}.sv.pos{color:var(--grn)}.sv.neg{color:var(--ros)}
+/* SCROLL */
+#scr{flex:1;overflow-y:auto;padding:12px 16px;background:var(--bg)}
 
-/* PROGRESS BAR */
-#prog-bar-wrap{height:4px;background:var(--bor);border-radius:2px;margin-bottom:12px;overflow:hidden}
-#prog-bar-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .3s}
+/* STATS */
+#stats{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:10px}
+.sc{background:var(--s1);border:1px solid var(--b1);border-radius:7px;padding:8px 10px;text-align:center}
+.sc .sl{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#555;font-weight:700;margin-bottom:2px}
+.sc .sv{font-size:14px;font-weight:800;color:#fff}
+.sc .ss{font-size:9px;color:#555;margin-top:1px}
+.grn{color:var(--grn)!important}.blu{color:var(--blu)!important}
+.pos{color:var(--grn)!important}.neg{color:var(--ros)!important}
 
-/* BULK BAR */
-#bulk{background:rgba(99,102,241,.12);border:1px solid #6366f1;border-radius:8px;padding:9px 12px;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-#bulk .bc{font-weight:800;color:#c7d2fe;font-size:11px;padding-right:8px;border-right:1px solid rgba(99,102,241,.4)}
-.bi{background:var(--bg);border:1px solid #6366f1;border-radius:4px;padding:4px 9px;font-size:11px;color:#fff;outline:none;width:105px;font-weight:700}
-.bapply{background:#6366f1;color:#fff;border:none;border-radius:4px;padding:5px 13px;font-size:11px;font-weight:800}
-.bapply:hover{background:#818cf8}
-.bcancel{background:none;border:none;color:#a5b4fc;font-size:11px;font-weight:700}
+/* PROGRESS */
+#progwrap{height:3px;background:var(--b1);border-radius:2px;margin-bottom:10px;overflow:hidden}
+#progfill{height:100%;background:var(--gold);border-radius:2px;transition:width .3s}
 
 /* ACTION BAR */
-#abar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;align-items:center}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:5px;font-size:11px;font-weight:800;border:none;transition:all .12s;white-space:nowrap}
+#abar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:5px;font-size:11px;font-weight:800;border:none;cursor:pointer;white-space:nowrap}
 .btn-gold{background:var(--gold);color:#000}.btn-gold:hover{opacity:.85}
-.btn-ghost{background:var(--sur2);border:1px solid var(--bor);color:var(--txt)}.btn-ghost:hover{background:var(--bor)}
-.btn-exp{background:var(--sur2);border:1px solid var(--bor);color:var(--gold)}.btn-exp:hover{background:var(--bor)}
-.btn-abw{background:rgba(204,17,53,.1);border:1px solid rgba(204,17,53,.4);color:#fca5a5}.btn-abw:hover{background:rgba(204,17,53,.2)}
-.btn-del{background:rgba(204,17,53,.1);border:1px solid rgba(204,17,53,.35);color:#fca5a5;font-size:11px}.btn-del:hover{background:rgba(204,17,53,.22)}
-#sw{flex:1;min-width:200px;background:var(--sur);border:1px solid var(--bor);border-radius:5px;padding:6px 11px;display:flex;align-items:center;gap:7px}
+.btn-gh{background:var(--s2);border:1px solid var(--b1);color:#e4e4e4}.btn-gh:hover{background:var(--b1)}
+.btn-exp{background:var(--s2);border:1px solid var(--b1);color:var(--gold)}.btn-exp:hover{background:var(--b1)}
+.btn-abw{background:rgba(204,17,53,.1);border:1px solid rgba(204,17,53,.35);color:#fca5a5}.btn-abw:hover{background:rgba(204,17,53,.2)}
+#sw{flex:1;min-width:200px;background:var(--s1);border:1px solid var(--b1);border-radius:5px;padding:6px 10px;display:flex;align-items:center;gap:6px}
 #sw:focus-within{border-color:var(--gold)}
 #sw input{background:none;border:none;outline:none;color:#fff;font-size:11px;width:100%}
 #sw input::placeholder{color:#444}
 
-/* FILTER BAR */
-#fbar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;background:var(--sur);border:1px solid var(--bor);border-radius:7px;padding:12px;margin-bottom:12px}
-.ft{font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#555;font-weight:700;margin-bottom:5px}
-.fchips{display:flex;flex-wrap:wrap;gap:3px}
-.fscroll{max-height:72px;overflow-y:auto;background:var(--bg);border:1px solid var(--bor);border-radius:4px;padding:3px}
-.chip{padding:3px 7px;border-radius:3px;font-size:10px;font-weight:700;border:1px solid var(--bor);background:var(--bg);color:#777;transition:all .1s;cursor:pointer}
+/* FILTER */
+#fbar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:var(--s1);border:1px solid var(--b1);border-radius:7px;padding:10px;margin-bottom:10px}
+.ft{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:#555;font-weight:700;margin-bottom:4px}
+.fc{display:flex;flex-wrap:wrap;gap:3px}
+.fsc{max-height:68px;overflow-y:auto;background:var(--bg);border:1px solid var(--b1);border-radius:3px;padding:3px}
+.chip{padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;border:1px solid var(--b1);background:var(--bg);color:#777;cursor:pointer}
 .chip:hover{border-color:#666;color:#ccc}
-.chip.cg{background:var(--gold);color:#000;border-color:var(--gold)}
-.chip.co{background:#f97316;color:#fff;border-color:#f97316}
-.chip.cb{background:#6366f1;color:#fff;border-color:#6366f1}
-#freset-row{grid-column:1/-1;border-top:1px solid var(--bor);padding-top:7px;text-align:right}
-.btn-rst{background:none;border:none;color:var(--red);font-size:10px;font-weight:700}
-.btn-rst:hover{text-decoration:underline}
+.cg{background:var(--gold)!important;color:#000!important;border-color:var(--gold)!important}
+.co{background:#f97316!important;color:#fff!important;border-color:#f97316!important}
+.cb{background:#6366f1!important;color:#fff!important;border-color:#6366f1!important}
+#frrow{grid-column:1/-1;border-top:1px solid var(--b1);padding-top:6px;text-align:right}
+#frrow button{background:none;border:none;color:var(--red);font-size:10px;font-weight:700;cursor:pointer}
+
+/* BULK */
+#bulk{background:rgba(99,102,241,.1);border:1px solid #6366f1;border-radius:7px;padding:8px 10px;margin-bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.bi{background:var(--bg);border:1px solid #6366f1;border-radius:3px;padding:3px 8px;font-size:11px;color:#fff;outline:none;width:100px;font-weight:700}
+.bk-ok{background:#6366f1;color:#fff;border:none;border-radius:3px;padding:4px 12px;font-size:11px;font-weight:800;cursor:pointer}.bk-ok:hover{background:#818cf8}
+.bk-no{background:none;border:none;color:#a5b4fc;font-size:11px;font-weight:700;cursor:pointer}
 
 /* TABLE */
-#twrap{background:var(--sur);border:1px solid var(--bor);border-radius:9px;overflow:hidden}
-#tscroll{overflow-x:auto}
-#tbl{width:100%;border-collapse:collapse;font-size:10px;min-width:1750px}
+#twrap{background:var(--s1);border:1px solid var(--b1);border-radius:8px;overflow:hidden}
+#tscr{overflow-x:auto}
+#tbl{width:100%;border-collapse:collapse;font-size:10px;min-width:1800px}
 #tbl thead{position:sticky;top:0;z-index:5}
-#tbl thead th{background:var(--bor2);color:#fff;padding:9px 9px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.55px;font-weight:800;white-space:nowrap;border-bottom:1px solid #555}
-#tbl thead th.r{text-align:right}
-th.gh{background:rgba(34,197,94,.12);color:#86efac}
-th.bh{background:rgba(99,102,241,.12);color:#a5b4fc}
-th.dh{background:rgba(0,0,0,.18)}
-#tbl tbody tr{border-bottom:1px solid var(--bor);transition:background .08s}
-#tbl tbody tr:hover{background:rgba(255,255,255,.025)}
-#tbl tbody tr.sel{background:rgba(99,102,241,.08)}
-td{padding:6px 9px;color:#ccc;white-space:nowrap}
-td.r{text-align:right;font-variant-numeric:tabular-nums}
-td.w{color:#fff;font-weight:800}
-td.gl{color:var(--gold);font-weight:800}
-td.grn{color:var(--grn);font-weight:800}
-td.blu{color:var(--blu);font-weight:800}
-td.pos{color:var(--grn);font-weight:800}
-td.neg{color:var(--ros);font-weight:800}
-td.dim{color:#444}
-td.dbg{background:rgba(0,0,0,.1)}
-td.gbg{background:rgba(34,197,94,.05)}
-td.bbg{background:rgba(99,102,241,.05)}
+#tbl thead th{background:var(--b2);color:#fff;padding:8px 8px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.5px;font-weight:800;white-space:nowrap;border-bottom:1px solid #555}
+.r{text-align:right!important;font-variant-numeric:tabular-nums}
+.gh{background:rgba(34,197,94,.1)!important;color:#86efac!important}
+.bh{background:rgba(99,102,241,.1)!important;color:#a5b4fc!important}
+.dh{background:rgba(0,0,0,.15)!important}
+#tbl tbody tr{border-bottom:1px solid var(--b1)}
+#tbl tbody tr:hover{background:rgba(255,255,255,.02)}
+#tbl tbody tr.sel{background:rgba(99,102,241,.07)}
+td{padding:5px 8px;color:#ccc;white-space:nowrap}
+.tw{color:#fff;font-weight:800}.tg{color:var(--gold);font-weight:800}
+.tgrn{color:var(--grn);font-weight:800}.tblu{color:var(--blu);font-weight:800}
+.tpos{color:var(--grn);font-weight:800}.tneg{color:var(--ros);font-weight:800}
+.tdim{color:#444}.tdbg{background:rgba(0,0,0,.1)}
+.tgbg{background:rgba(34,197,94,.04)}.tbbg{background:rgba(99,102,241,.04)}
 
-/* CELL INPUTS */
-.ci{background:var(--bg);border:1px solid var(--bor);border-radius:3px;padding:3px 6px;color:#fff;outline:none;font-size:10px;font-weight:700;font-family:inherit;transition:border-color .1s;width:100%}
+/* INPUTS IN TABLE */
+.ci{background:var(--bg);border:1px solid var(--b1);border-radius:3px;padding:2px 5px;color:#fff;outline:none;font-size:10px;font-weight:700;font-family:inherit;transition:border-color .1s;width:100%}
 .ci:focus{border-color:var(--gold)}
-.ci.grni{color:var(--grn);border-color:rgba(74,222,128,.25)}
-.ci.grni:focus{border-color:var(--grn)}
-.ci.blui{color:var(--blu);border-color:rgba(129,140,248,.25)}
-.ci.blui:focus{border-color:var(--blu)}
-.cwrap{display:flex;align-items:center;gap:3px;background:var(--bg);border:1px solid var(--bor);border-radius:3px;padding:3px 6px;transition:border-color .1s}
-.cwrap:focus-within{border-color:var(--gold)}
-.cwrap .icon{color:#333;font-size:9px;flex-shrink:0}
-.cwrap input{background:none;border:none;outline:none;font-size:10px;font-weight:700;font-family:inherit;width:100%}
+.ci.gi{color:var(--grn);border-color:rgba(74,222,128,.2)}.ci.gi:focus{border-color:var(--grn)}
+.ci.bi2{color:var(--blu);border-color:rgba(129,140,248,.2)}.ci.bi2:focus{border-color:var(--blu)}
+.cw{display:flex;align-items:center;gap:2px;background:var(--bg);border:1px solid var(--b1);border-radius:3px;padding:2px 5px}
+.cw:focus-within{border-color:var(--gold)}
+.cw span{color:#333;font-size:9px;flex-shrink:0}
+.cw input{background:none;border:none;outline:none;font-size:10px;font-weight:700;font-family:inherit;width:100%;color:#a5b4fc}
 
 /* CHECKBOX */
-.cb{background:none;border:none;padding:2px;color:#444;display:flex;align-items:center;justify-content:center}
-.cb:hover{color:var(--gold)}
-.cbx{width:13px;height:13px;border:2px solid currentColor;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:900}
-.cbx.on{background:var(--gold);border-color:var(--gold);color:#000}
+.ck{background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;justify-content:center}
+.ckb{width:13px;height:13px;border:2px solid #444;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:#000}
+.ckb.on{background:var(--gold);border-color:var(--gold)}
 
 /* WELCOME */
-#welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#2a2a2b}
-#welcome .wi{font-size:56px;margin-bottom:14px}
-#welcome h2{font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:2px}
+#wel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#222}
+#wel .wi{font-size:52px;margin-bottom:12px}
+#wel h2{font-size:17px;font-weight:900;text-transform:uppercase;letter-spacing:2px}
 
 /* MODAL */
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(5px)}
-.md{background:var(--sur);border:1px solid var(--bor);border-radius:14px;width:400px;max-width:95vw;overflow:hidden}
-.mh{padding:16px 20px;border-bottom:1px solid var(--bor);background:var(--sur2);display:flex;justify-content:space-between;align-items:center}
-.mh h3{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:1.2px}
-.mh .mx{background:none;border:none;color:#555;font-size:16px;line-height:1}.mh .mx:hover{color:#fff}
-.mb{padding:20px;display:flex;flex-direction:column;gap:12px}
-.mi{width:100%;background:var(--bg);border:1px solid var(--bor);border-radius:8px;padding:11px 14px;color:#fff;outline:none;font-size:13px;font-weight:700;font-family:inherit}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px)}
+.md{background:var(--s1);border:1px solid var(--b1);border-radius:12px;width:380px;max-width:95vw;overflow:hidden}
+.mh{padding:14px 18px;background:var(--s2);border-bottom:1px solid var(--b1);display:flex;justify-content:space-between;align-items:center}
+.mh h3{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:1px}
+.mh .mx{background:none;border:none;color:#555;font-size:16px;cursor:pointer;line-height:1}.mh .mx:hover{color:#fff}
+.mb{padding:18px;display:flex;flex-direction:column;gap:10px}
+.mi{width:100%;background:var(--bg);border:1px solid var(--b1);border-radius:7px;padding:10px 13px;color:#fff;outline:none;font-size:13px;font-weight:700;font-family:inherit}
 .mi:focus{border-color:var(--gold)}
-.mf{padding:14px 20px;border-top:1px solid var(--bor);background:var(--sur2);display:flex;justify-content:flex-end;gap:10px;align-items:center}
-.mcnl{background:none;border:none;color:#555;font-size:11px;font-weight:700;text-transform:uppercase}.mcnl:hover{color:#fff}
-.mok{background:var(--gold);color:#000;border:none;border-radius:8px;padding:9px 24px;font-size:11px;font-weight:900;text-transform:uppercase}.mok:hover{opacity:.85}
+.mf{padding:12px 18px;background:var(--s2);border-top:1px solid var(--b1);display:flex;justify-content:flex-end;gap:8px;align-items:center}
+.mc{background:none;border:none;color:#555;font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase}.mc:hover{color:#fff}
+.mok{background:var(--gold);color:#000;border:none;border-radius:7px;padding:8px 22px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase}.mok:hover{opacity:.85}
 
 /* TOAST */
-#toast{position:fixed;bottom:18px;right:18px;padding:9px 16px;border-radius:7px;font-size:12px;font-weight:700;z-index:9999;display:none}
+#toast{position:fixed;bottom:16px;right:16px;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:700;z-index:9999;display:none}
 .tok{background:#14532d;color:var(--grn);border:1px solid var(--grn)}
 .ter{background:#7f1d1d;color:#fca5a5;border:1px solid #fca5a5}
-
-@media(max-width:1200px){#stats{grid-template-columns:repeat(4,1fr)}#fbar{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 
 <div id="hdr">
-  <div class="logo">⚙ Stahl<span>bau</span> <span style="color:#444;font-weight:300;margin:0 8px">|</span><span style="font-weight:400;color:#777;font-size:13px">Controlling</span></div>
+  <div class="logo">⚙ Stahl<em>bau</em> <span style="color:#444;margin:0 8px;font-weight:300">|</span><span style="font-weight:400;color:#777;font-size:13px">Controlling</span></div>
   <div class="sub">Hoffmeier Industrieanlagen<br>GmbH &amp; Co. KG</div>
 </div>
 
 <div id="app">
-  <div id="sidebar">
-    <div id="sb-head">
+  <div id="sb">
+    <div id="sb-hd">
       <h3>Projekte</h3>
-      <button class="btn-new" onclick="openModal()">+ Neu</button>
+      <button onclick="openModal()">+ Neu</button>
     </div>
-    <div id="proj-list"></div>
+    <div id="plist"></div>
   </div>
   <div id="main">
-    <div id="welcome"><div class="wi">🏗</div><h2>Projekt auswählen</h2></div>
+    <div id="wel"><div class="wi">🏗</div><h2>Projekt auswählen</h2></div>
   </div>
 </div>
 
 <!-- MODAL -->
-<div class="mo" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+<div class="mo" id="modal" style="display:none">
   <div class="md">
     <div class="mh"><h3>Projekt anlegen</h3><button class="mx" onclick="closeModal()">✕</button></div>
     <div class="mb">
-      <input class="mi" id="mnr" placeholder="Projektnummer" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('mname').focus()">
-      <input class="mi" id="mname" placeholder="Projektbezeichnung" autocomplete="off" onkeydown="if(event.key==='Enter')createProject()">
+      <input class="mi" id="m-nr" placeholder="Projektnummer" autocomplete="off">
+      <input class="mi" id="m-name" placeholder="Projektbezeichnung" autocomplete="off" onkeydown="if(event.key==='Enter')createProject()">
     </div>
     <div class="mf">
-      <button class="mcnl" onclick="closeModal()">Abbrechen</button>
+      <button class="mc" onclick="closeModal()">Abbrechen</button>
       <button class="mok" onclick="createProject()">Erstellen</button>
     </div>
   </div>
 </div>
 
-<input type="file" id="fSoll" accept=".xlsx,.xls" style="display:none" onchange="loadFile(event,'soll')">
-<input type="file" id="fIst"  accept=".xlsx,.xls" style="display:none" onchange="loadFile(event,'ist')">
+<input type="file" id="fSoll" accept=".xlsx,.xls" style="display:none" onchange="loadXLSXFile(event,'soll')">
+<input type="file" id="fIst"  accept=".xlsx,.xls" style="display:none" onchange="loadXLSXFile(event,'ist')">
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════════════════
-const S = {
-  projects: {},
-  activeId: null,
-  ft: '',           // filter text
-  fg: [],           // filter groups
-  fp: [],           // filter profiles
-  fgr: [],          // filter grades
-  fl: [],           // filter levels
-  sel: new Set(),   // selected item ids
-  bGrade:'', bLen:'', bLevel:'', bComment:''
-};
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+var P = {};          // projects
+var AID = null;      // active project id
+var FT = '';         // filter text
+var FG = [];         // filter groups
+var FP = [];         // filter profiles
+var FGR = [];        // filter grades
+var FL = [];         // filter levels
+var SEL = {};        // selected item ids {id:true}
+var BG='',BL='',BLV='',BC=''; // bulk fields
 
-// ═══════════════════════════════════════════════════════════
-//  PERSIST
-// ═══════════════════════════════════════════════════════════
-function save() {
-  try { localStorage.setItem('sb_v50', JSON.stringify(S.projects)); } catch(e){}
+// ═══════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════
+var STORE_KEY = 'sbapp_v1';
+
+function saveAll() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(P)); } catch(e) {}
 }
-function loadStorage() {
+
+function loadAll() {
   try {
-    const d = localStorage.getItem('sb_v50');
-    if (!d) return;
-    S.projects = JSON.parse(d);
-    // cleanup legacy subtotal rows
-    for (const p of Object.values(S.projects))
-      if (p.allItems) p.allItems = p.allItems.filter(i => !i.isSubtotal);
-    const ids = Object.keys(S.projects);
-    if (ids.length) S.activeId = ids[ids.length - 1];
-  } catch(e) {}
+    var d = localStorage.getItem(STORE_KEY);
+    if (d) P = JSON.parse(d);
+  } catch(e) { P = {}; }
 }
 
-// ═══════════════════════════════════════════════════════════
-//  HELPERS
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
 function pn(v) {
-  if (v===undefined||v===null||v==='') return 0;
-  const n = parseFloat(String(v).replace(/\s/g,'').replace(',','.'));
+  if (v === undefined || v === null || v === '') return 0;
+  var n = parseFloat(String(v).replace(/\s/g,'').replace(',','.'));
   return isNaN(n) ? 0 : n;
 }
-function fmt(v, d=3) {
+
+function fm(v, d) {
+  d = d === undefined ? 3 : d;
   if (typeof v !== 'number' || isNaN(v)) return '—';
-  return v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+  return v.toLocaleString('de-DE', {minimumFractionDigits:d, maximumFractionDigits:d});
 }
-function fmtN(v,d=0) {
-  if (typeof v !== 'number' || isNaN(v)) return '—';
-  return v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
-}
-function grp(profile) {
+
+function getGroup(profile) {
   if (!profile) return 'Sonstiges';
-  const p = profile.toUpperCase().trim();
+  var p = profile.toUpperCase().trim();
   if (/^(BLECH|PL|FL)/.test(p)) return 'Bleche';
   if (/^HEA/.test(p)) return 'HEA';
   if (/^HEB/.test(p)) return 'HEB';
@@ -272,548 +252,668 @@ function grp(profile) {
   return 'Sonstiges';
 }
 
-// Berechne Ist-Werte für eine Position
-// Logik: Ist-Gewicht = Soll-Gewicht-Gesamt × (Ist-Stk / Soll-Stk)
-// Wenn zusätzlich eine andere Ist-Länge eingetragen → weiterer Faktor
+// Berechne Ist-Werte: Gewicht und Fläche proportional zu Ist-Stückzahl (und Ist-Länge)
 function calcIst(item, d) {
-  const istQty = d?.istQty ?? null;
-  if (istQty === null) return { istQty:null, istWgt:null, istArea:null, dWgt:null, dArea:null };
-  const istLen  = d?.manualLength || item.len;
-  const qF      = item.qty > 0 ? istQty / item.qty : 0;
-  const lF      = (item.len > 0 && istLen > 0) ? istLen / item.len : 1;
-  const factor  = qF * lF;
-  const istWgt  = item.wgtSum * factor;
-  const istArea = item.areaSum * factor;
-  return { istQty, istWgt, istArea, dWgt: istWgt - item.wgtSum, dArea: istArea - item.areaSum };
+  if (!d || d.istQty === undefined || d.istQty === null) {
+    return { has: false, istQty: null, istWgt: null, istArea: null, dWgt: null, dArea: null };
+  }
+  var istQty = d.istQty;
+  var sollLen = item.len || 1;
+  var istLen  = d.manualLength || item.len || 1;
+  var qF = item.qty > 0 ? istQty / item.qty : 0;
+  var lF = (item.len > 0 && istLen > 0) ? istLen / item.len : 1;
+  var factor = qF * lF;
+  var istWgt  = item.wgtSum  * factor;
+  var istArea = item.areaSum * factor;
+  return {
+    has: true,
+    istQty: istQty,
+    istWgt: istWgt,
+    istArea: istArea,
+    dWgt:  istWgt  - item.wgtSum,
+    dArea: istArea - item.areaSum
+  };
 }
 
-// ═══════════════════════════════════════════════════════════
-//  XLSX PARSER
-// ═══════════════════════════════════════════════════════════
-function mcol(headers, pats) {
-  for (const pat of pats) {
-    const re = new RegExp(pat, 'i');
-    const i = headers.findIndex(h => re.test(String(h||'').replace(/:$/,'').trim()));
-    if (i >= 0) return i;
+function toast(msg, type) {
+  var t = document.getElementById('toast');
+  t.className = type === 'err' ? 'ter' : 'tok';
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.style.display = 'none'; }, 3000);
+}
+
+// ═══════════════════════════════════════════════
+// XLSX PARSER
+// ═══════════════════════════════════════════════
+function findCol(headers, patterns) {
+  for (var pi = 0; pi < patterns.length; pi++) {
+    var re = new RegExp(patterns[pi], 'i');
+    for (var hi = 0; hi < headers.length; hi++) {
+      if (re.test(String(headers[hi]||'').replace(/:$/,'').trim())) return hi;
+    }
   }
   return -1;
 }
-function parseXLSX(data) {
-  const wb = XLSX.read(data, {type:'array'});
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', blankrows:false});
-  const kw = /profil|profile|grade|güte|qty|stück|length|länge|weight|gewicht|area|fläche|comment|bemerk|level|ebene/i;
-  let bestRow=-1, bestScore=0;
-  for (let i=0; i<Math.min(25,rows.length); i++) {
-    const score = rows[i].filter(c=>typeof c==='string'&&kw.test(c)).length;
-    if (score>bestScore){bestScore=score;bestRow=i;}
+
+function parseSheet(data) {
+  var wb = XLSX.read(data, {type:'array'});
+  var ws = wb.Sheets[wb.SheetNames[0]];
+  var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', blankrows:false});
+  var kw = /profil|profile|grade|güte|qty|stück|length|länge|weight|gewicht|area|fläche|comment|bemerk|level|ebene/i;
+  var bestRow = -1, bestScore = 0;
+  for (var i = 0; i < Math.min(25, rows.length); i++) {
+    var score = 0;
+    for (var j = 0; j < rows[i].length; j++) {
+      if (typeof rows[i][j] === 'string' && kw.test(rows[i][j])) score++;
+    }
+    if (score > bestScore) { bestScore = score; bestRow = i; }
   }
-  if (bestRow<0) return null;
-  const h = rows[bestRow].map(c=>String(c||'').trim().replace(/:$/,''));
-  const c = {
-    pro: mcol(h,['profil','profile','bauteil','bezeich','description']),
-    grd: mcol(h,['grade','güte','stahl','quality','material']),
-    qty: mcol(h,['qty','stück','stueck','menge','anz','pcs']),
-    len: mcol(h,['^length \\[mm\\]','^länge \\[mm\\]','length$','länge$']),
-    lns: mcol(h,['length sum','sum.*length','länge.*sum','sum.*länge']),
-    wgt: mcol(h,['^weight \\[kg\\]','^gewicht \\[kg\\]','weight$','gewicht$']),
-    wgs: mcol(h,['weight sum','sum.*weight','gewicht.*sum','gesamtgewicht']),
-    are: mcol(h,['^area \\[m','^fläche \\[m','area$','fläche$']),
-    ars: mcol(h,['area sum','sum.*area','fläche.*sum','gesamtfläche']),
-    com: mcol(h,['comment','bemerk','notiz','remark']),
-    lev: mcol(h,['level','ebene','nivelle','geschoss','etage','floor'])
+  if (bestRow < 0) return null;
+  var h = rows[bestRow].map(function(c){ return String(c||'').trim().replace(/:$/,''); });
+  var c = {
+    pro: findCol(h,['profil','profile','bauteil','bezeich','description']),
+    grd: findCol(h,['grade','güte','stahl','quality','material']),
+    qty: findCol(h,['qty','stück','stueck','menge','anz','pcs']),
+    len: findCol(h,['^length \\[mm\\]','^länge \\[mm\\]','length$','länge$']),
+    lns: findCol(h,['length sum','sum.*length','länge.*sum','sum.*länge']),
+    wgt: findCol(h,['^weight \\[kg\\]','^gewicht \\[kg\\]','weight$','gewicht$']),
+    wgs: findCol(h,['weight sum','sum.*weight','gewicht.*sum','gesamtgewicht']),
+    are: findCol(h,['^area \\[m','^fläche \\[m','area$','fläche$']),
+    ars: findCol(h,['area sum','sum.*area','fläche.*sum','gesamtfläche']),
+    com: findCol(h,['comment','bemerk','notiz','remark']),
+    lev: findCol(h,['level','ebene','nivelle','geschoss','etage','floor'])
   };
-  if (c.pro<0) return null;
-  const items=[];
-  for (let i=bestRow+1; i<rows.length; i++) {
-    const r=rows[i];
-    const rawP=String(r[c.pro]||'').trim();
+  if (c.pro < 0) return null;
+  var items = [];
+  for (var i = bestRow + 1; i < rows.length; i++) {
+    var r = rows[i];
+    var rawP = String(c.pro >= 0 ? r[c.pro] || '' : '').trim();
     if (!rawP) continue;
     if (/^(title|date|rev|page|projekt)/i.test(rawP)) continue;
-    if (/sub.?total|gesamt|summe|^total/i.test(rawP)) continue;
-    if (r.some(x=>/^\s*total\s*:/i.test(String(x||'')))) continue;
-    const qty=pn(r[c.qty]), len=pn(r[c.len]), wgt=pn(r[c.wgt]);
-    const wgtSum=pn(r[c.wgs])||(qty*wgt);
-    const area=pn(r[c.are]);
-    const areaSum=pn(r[c.ars])||(qty*area);
-    if (wgtSum===0&&qty===0) continue;
+    if (/sub.?total|^total|gesamt|summe/i.test(rawP)) continue;
+    var hasTotal = false;
+    for (var j = 0; j < r.length; j++) { if (/^\s*total\s*:/i.test(String(r[j]||''))) { hasTotal = true; break; } }
+    if (hasTotal) continue;
+    var qty    = pn(c.qty >= 0 ? r[c.qty] : 0);
+    var len    = pn(c.len >= 0 ? r[c.len] : 0);
+    var wgt    = pn(c.wgt >= 0 ? r[c.wgt] : 0);
+    var wgtSum = pn(c.wgs >= 0 ? r[c.wgs] : 0) || (qty * wgt);
+    var area   = pn(c.are >= 0 ? r[c.are] : 0);
+    var arSum  = pn(c.ars >= 0 ? r[c.ars] : 0) || (qty * area);
+    if (wgtSum === 0 && qty === 0) continue;
+    var grade = String(c.grd >= 0 ? r[c.grd] || '' : '').trim();
+    // Stable ID: kein Zeilennummer!
+    var id = rawP + '||' + grade + '||' + len + '||' + qty;
     items.push({
-      id:`${rawP}||${String(r[c.grd]||'').trim()}||${len}||${qty}||${i}`,
-      profile:rawP, grade:String(r[c.grd]||'').trim(),
-      qty, len, lenSum:pn(r[c.lns])||(qty*len),
-      wgt, wgtSum, area, areaSum,
-      comment:c.com>=0?String(r[c.com]||'').trim():'',
-      level:c.lev>=0?String(r[c.lev]||'').trim():'',
-      group:grp(rawP)
+      id: id,
+      profile: rawP, grade: grade,
+      qty: qty, len: len,
+      lenSum: pn(c.lns >= 0 ? r[c.lns] : 0) || (qty * len),
+      wgt: wgt, wgtSum: wgtSum,
+      area: area, areaSum: arSum,
+      comment: String(c.com >= 0 ? r[c.com] || '' : '').trim(),
+      level:   String(c.lev >= 0 ? r[c.lev] || '' : '').trim(),
+      group: getGroup(rawP)
     });
   }
   return items.length ? items : null;
 }
 
-// ═══════════════════════════════════════════════════════════
-//  FILE HANDLER
-// ═══════════════════════════════════════════════════════════
-function loadFile(e, mode) {
-  const file=e.target.files[0];
-  if (!file||!S.activeId) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const items=parseXLSX(new Uint8Array(ev.target.result));
-    if (!items){toast('Keine Daten erkannt — Spaltenüberschriften prüfen','err');return;}
-    const p=S.projects[S.activeId];
-    if (mode==='soll'){
-      p.allItems=[...(p.allItems||[]),...items];
-      p.lists=[...(p.lists||[]),{filename:file.name,date:new Date().toLocaleDateString('de-DE'),count:items.length}];
-      toast(`✓ ${items.length} Positionen geladen`,'ok');
+// ═══════════════════════════════════════════════
+// FILE LOADING
+// ═══════════════════════════════════════════════
+function loadXLSXFile(e, mode) {
+  var file = e.target.files[0];
+  if (!file || !AID) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var items = parseSheet(new Uint8Array(ev.target.result));
+    if (!items) { toast('Keine Daten erkannt', 'err'); return; }
+    var proj = P[AID];
+    if (mode === 'soll') {
+      // Deduplizieren: gleiche ID → überschreiben
+      var map = {};
+      var existing = proj.items || [];
+      for (var i = 0; i < existing.length; i++) map[existing[i].id] = existing[i];
+      for (var i = 0; i < items.length; i++) map[items[i].id] = items[i];
+      proj.items = Object.values(map);
+      if (!proj.lists) proj.lists = [];
+      proj.lists.push({name: file.name, date: new Date().toLocaleDateString('de-DE'), count: items.length});
+      toast('✓ ' + items.length + ' Positionen geladen', 'ok');
     } else {
-      items.forEach(it=>{
-        if (!p.istData[it.id]) p.istData[it.id]={};
-        p.istData[it.id].istQty=it.qty;
-        if (it.len>0) p.istData[it.id].manualLength=it.len;
-      });
-      toast(`✓ Ist-Mengen: ${items.length} Positionen`,'ok');
+      if (!proj.ist) proj.ist = {};
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        if (!proj.ist[it.id]) proj.ist[it.id] = {};
+        proj.ist[it.id].istQty = it.qty;
+        if (it.len > 0) proj.ist[it.id].manualLength = it.len;
+      }
+      toast('✓ Ist-Mengen: ' + items.length + ' Positionen', 'ok');
     }
-    save(); render();
+    saveAll();
+    renderAll();
   };
   reader.readAsArrayBuffer(file);
-  e.target.value='';
+  e.target.value = '';
 }
 
-// ═══════════════════════════════════════════════════════════
-//  PROJECT MANAGEMENT
-// ═══════════════════════════════════════════════════════════
-function openModal(){
-  document.getElementById('modal').style.display='flex';
-  document.getElementById('mnr').value='';
-  document.getElementById('mname').value='';
-  setTimeout(()=>document.getElementById('mnr').focus(),50);
+// ═══════════════════════════════════════════════
+// PROJECT MANAGEMENT
+// ═══════════════════════════════════════════════
+function openModal() {
+  document.getElementById('modal').style.display = 'flex';
+  document.getElementById('m-nr').value = '';
+  document.getElementById('m-name').value = '';
+  setTimeout(function(){ document.getElementById('m-nr').focus(); }, 50);
 }
-function closeModal(){document.getElementById('modal').style.display='none';}
-function createProject(){
-  const nr=document.getElementById('mnr').value.trim();
-  const name=document.getElementById('mname').value.trim();
-  if (!nr&&!name) return;
-  const id=Date.now().toString();
-  S.projects[id]={id,nr,name,lists:[],istData:{},allItems:[],created:new Date().toLocaleDateString('de-DE')};
-  S.activeId=id; S.sel=new Set(); S.fg=[]; S.fp=[]; S.fgr=[]; S.fl=[]; S.ft='';
-  save(); closeModal(); render();
-}
-function selectProject(id){
-  S.activeId=id; S.sel=new Set(); S.fg=[]; S.fp=[]; S.fgr=[]; S.fl=[]; S.ft='';
-  render();
-}
-function deleteProject(id){
-  if (!confirm('Projekt und alle Daten löschen?')) return;
-  delete S.projects[id];
-  if (S.activeId===id) S.activeId=Object.keys(S.projects)[0]||null;
-  save(); render();
-}
-function deleteActiveProject(){
-  if (S.activeId) deleteProject(S.activeId);
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+function createProject() {
+  var nr   = document.getElementById('m-nr').value.trim();
+  var name = document.getElementById('m-name').value.trim();
+  if (!nr && !name) return;
+  var id = Date.now().toString();
+  P[id] = { id:id, nr:nr, name:name||nr, items:[], ist:{}, lists:[], created:new Date().toLocaleDateString('de-DE') };
+  AID = id;
+  resetFilters();
+  saveAll();
+  closeModal();
+  renderAll();
 }
 
-// ═══════════════════════════════════════════════════════════
-//  IST DATA — sofortige Neuberechnung der Tabellenzeile
-// ═══════════════════════════════════════════════════════════
+function selectProject(id) {
+  AID = id;
+  resetFilters();
+  renderAll();
+}
+
+function deleteProject(id) {
+  if (!confirm('Projekt "' + P[id].name + '" und alle Daten löschen?')) return;
+  delete P[id];
+  var ids = Object.keys(P);
+  AID = ids.length > 0 ? ids[ids.length - 1] : null;
+  resetFilters();
+  saveAll();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════
+// IST DATA
+// ═══════════════════════════════════════════════
 function setIstQty(itemId, val) {
-  const p=S.projects[S.activeId];
-  if (!p.istData[itemId]) p.istData[itemId]={};
-  if (val===''||val===null) delete p.istData[itemId].istQty;
-  else p.istData[itemId].istQty=pn(val);
-  save();
-  refreshRow(itemId);
-  refreshStats();
-}
-function setField(itemId, field, val) {
-  const p=S.projects[S.activeId];
-  if (!p.istData[itemId]) p.istData[itemId]={};
-  if (field==='manualLength'){const n=pn(val);p.istData[itemId][field]=n>0?n:undefined;}
-  else p.istData[itemId][field]=val;
-  save();
-  if (field==='manualLength'){refreshRow(itemId);refreshStats();}
+  var proj = P[AID];
+  if (!proj) return;
+  if (!proj.ist) proj.ist = {};
+  if (!proj.ist[itemId]) proj.ist[itemId] = {};
+  if (val === '' || val === null) {
+    delete proj.ist[itemId].istQty;
+  } else {
+    proj.ist[itemId].istQty = pn(val);
+  }
+  saveAll();
+  updateStatsDisplay();
+  updateRowDisplay(itemId);
 }
 
-// Aktualisiert nur die berechneten Zellen einer Zeile (schnell, kein Neubau)
-function refreshRow(itemId) {
-  const p=S.projects[S.activeId];
-  if (!p) return;
-  const item=(p.allItems||[]).find(i=>i.id===itemId);
+function setManualField(itemId, field, val) {
+  var proj = P[AID];
+  if (!proj) return;
+  if (!proj.ist) proj.ist = {};
+  if (!proj.ist[itemId]) proj.ist[itemId] = {};
+  if (field === 'manualLength') {
+    var n = pn(val);
+    if (n > 0) proj.ist[itemId].manualLength = n;
+    else delete proj.ist[itemId].manualLength;
+  } else {
+    proj.ist[itemId][field] = val;
+  }
+  saveAll();
+  if (field === 'manualLength') { updateStatsDisplay(); updateRowDisplay(itemId); }
+}
+
+// ═══════════════════════════════════════════════
+// STATS CALCULATION & DISPLAY
+// ═══════════════════════════════════════════════
+function calcStats() {
+  var proj = P[AID];
+  if (!proj) return {sW:0,sA:0,iW:0,iA:0,eP:0,tot:0,dW:0,dA:0,prog:0};
+  var items = getFiltered();
+  var sW=0,sA=0,iW=0,iA=0,eP=0,swC=0,saC=0;
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    sW += item.wgtSum;
+    sA += item.areaSum;
+    var d = proj.ist ? proj.ist[item.id] : null;
+    var r = calcIst(item, d);
+    if (r.has) {
+      eP++;
+      iW  += r.istWgt;
+      iA  += r.istArea;
+      swC += item.wgtSum;
+      saC += item.areaSum;
+    }
+  }
+  var prog = items.length > 0 ? eP / items.length * 100 : 0;
+  return {sW:sW,sA:sA,iW:iW,iA:iA,eP:eP,tot:items.length,dW:iW-swC,dA:iA-saC,prog:prog};
+}
+
+function updateStatsDisplay() {
+  var st = calcStats();
+  var set = function(id, val, sub, cls) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var sv = el.querySelector('.sv');
+    var ss = el.querySelector('.ss');
+    if (sv) { sv.textContent = val; sv.className = 'sv' + (cls ? ' ' + cls : ''); }
+    if (ss && sub !== undefined) ss.textContent = sub;
+  };
+  set('st0', fm(st.sW,3), fm(st.sW/1000,3)+' t');
+  set('st1', fm(st.sA,3)+' m²', '');
+  set('st2', fm(st.iW,3), fm(st.iW/1000,3)+' t', 'grn');
+  set('st3', fm(st.iA,3)+' m²', '', 'blu');
+  var dWcls = Math.abs(st.dW) < 0.001 ? '' : st.dW < 0 ? 'neg' : 'pos';
+  var dAcls = Math.abs(st.dA) < 0.00001 ? '' : st.dA < 0 ? 'neg' : 'pos';
+  set('st4', (st.dW > 0 ? '+' : '') + fm(st.dW,3) + ' kg', '', dWcls);
+  set('st5', (st.dA > 0 ? '+' : '') + fm(st.dA,3) + ' m²', '', dAcls);
+  set('st6', fm(st.prog,1) + '%', st.eP + '/' + st.tot + ' Pos.');
+  var pb = document.getElementById('progfill');
+  if (pb) pb.style.width = Math.min(st.prog, 100) + '%';
+}
+
+// Update only the calculated cells of one row (fast, no full re-render)
+function updateRowDisplay(itemId) {
+  var proj = P[AID];
+  if (!proj) return;
+  var item = null;
+  var items = proj.items || [];
+  for (var i = 0; i < items.length; i++) { if (items[i].id === itemId) { item = items[i]; break; } }
   if (!item) return;
-  const row=document.querySelector(`tr[data-id="${CSS.escape(itemId)}"]`);
+  var row = document.querySelector('tr[data-id="' + CSS.escape(itemId) + '"]');
   if (!row) return;
-  const d=p.istData[itemId]||{};
-  const {istQty,istWgt,istArea,dWgt,dArea}=calcIst(item,d);
-  const istLen=d.manualLength||item.len;
-  const cLenSum=istQty!==null?(istQty*istLen):(item.qty*item.len);
+  var d = proj.ist ? proj.ist[itemId] : null;
+  var r = calcIst(item, d);
+  var istLen = (d && d.manualLength) ? d.manualLength : item.len;
+  var cLenSum = r.has ? (r.istQty * istLen) : (item.qty * item.len);
 
-  const cells=row.querySelectorAll('td');
-  // col 6 = Länge(G), col 12 = Gew.Ist, col 13 = Diff.Gew, col 14 = Fläche.Ist, col 15 = Diff.Fläche
-  cells[6].textContent = fmtN(cLenSum,0);
-  cells[6].className = istQty!==null ? 'r gl' : 'r dim';
-
-  cells[12].textContent = istWgt!==null ? fmt(istWgt,3) : '—';
-  cells[12].className = 'r grn gbg';
-
-  // Differenz Gewicht
-  cells[13].textContent = dWgt!==null ? ((dWgt>0?'+':'')+fmt(dWgt,3)) : '—';
-  cells[13].className = 'r ' + (dWgt===null?'dim': Math.abs(dWgt)<0.0005?'dim':dWgt<0?'neg':'pos');
-
-  // Fläche Ist
-  if (cells[14]) {
-    cells[14].textContent = istArea!==null ? fmt(istArea,3) : '—';
-    cells[14].className = 'r blu gbg';
+  var cells = row.querySelectorAll('td');
+  // col indices (0-based): 0=ck, 1=profil, 2=matS, 3=matI, 4=lenE, 5=lenI, 6=lenG, 7=stkS, 8=wgtE, 9=wgtG, 10=areG, 11=stkI(input), 12=wgtIst, 13=dWgt, 14=areIst, 15=dAre, 16=ebene, 17=comment
+  if (cells[6]) { cells[6].textContent = fm(cLenSum, 0); cells[6].className = 'r' + (r.has ? ' tg tdbg' : ' tdim tdbg'); }
+  if (cells[12]) { cells[12].textContent = r.has ? fm(r.istWgt, 3) : '—'; }
+  if (cells[13]) {
+    cells[13].textContent = r.has ? ((r.dWgt > 0 ? '+' : '') + fm(r.dWgt, 3)) : '—';
+    cells[13].className = 'r' + (r.has ? (Math.abs(r.dWgt) < 0.0005 ? ' tdim' : r.dWgt < 0 ? ' tneg' : ' tpos') : ' tdim');
   }
-  // Differenz Fläche
+  if (cells[14]) { cells[14].textContent = r.has ? fm(r.istArea, 3) : '—'; }
   if (cells[15]) {
-    cells[15].textContent = dArea!==null ? ((dArea>0?'+':'')+fmt(dArea,3)) : '—';
-    cells[15].className = 'r ' + (dArea===null?'dim':Math.abs(dArea)<0.000001?'dim':dArea<0?'neg':'pos');
+    cells[15].textContent = r.has ? ((r.dArea > 0 ? '+' : '') + fm(r.dArea, 3)) : '—';
+    cells[15].className = 'r' + (r.has ? (Math.abs(r.dArea) < 0.000001 ? ' tdim' : r.dArea < 0 ? ' tneg' : ' tpos') : ' tdim');
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-//  STATS
-// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// FILTER
+// ═══════════════════════════════════════════════
+function resetFilters() { FT=''; FG=[]; FP=[]; FGR=[]; FL=[]; SEL={}; BG=''; BL=''; BLV=''; BC=''; }
+
 function getFiltered() {
-  const p=S.projects[S.activeId];
-  if (!p) return [];
-  let items=p.allItems||[];
-  if (S.fg.length) items=items.filter(i=>S.fg.includes(i.group));
-  if (S.fp.length) items=items.filter(i=>S.fp.includes(i.profile));
-  if (S.fgr.length) items=items.filter(i=>S.fgr.includes(p.istData[i.id]?.manualGrade||i.grade||'---'));
-  if (S.fl.length) items=items.filter(i=>S.fl.includes(p.istData[i.id]?.manualLevel||i.level||'[Ohne Ebene]'));
-  if (S.ft) {
-    const q=S.ft.toLowerCase();
-    items=items.filter(i=>
-      i.profile.toLowerCase().includes(q)||
-      i.grade.toLowerCase().includes(q)||
-      (p.istData[i.id]?.manualGrade||'').toLowerCase().includes(q)||
-      (i.level||'').toLowerCase().includes(q)||
-      (p.istData[i.id]?.manualLevel||'').toLowerCase().includes(q)||
-      (p.istData[i.id]?.manualComment||'').toLowerCase().includes(q)||
-      (i.comment||'').toLowerCase().includes(q)
-    );
+  var proj = P[AID];
+  if (!proj) return [];
+  var items = proj.items || [];
+  if (FG.length) items = items.filter(function(i){ return FG.indexOf(i.group) >= 0; });
+  if (FP.length) items = items.filter(function(i){ return FP.indexOf(i.profile) >= 0; });
+  if (FGR.length) items = items.filter(function(i){
+    var g = (proj.ist && proj.ist[i.id] && proj.ist[i.id].manualGrade) ? proj.ist[i.id].manualGrade : (i.grade || '---');
+    return FGR.indexOf(g) >= 0;
+  });
+  if (FL.length) items = items.filter(function(i){
+    var l = (proj.ist && proj.ist[i.id] && proj.ist[i.id].manualLevel) ? proj.ist[i.id].manualLevel : (i.level || '[Ohne Ebene]');
+    return FL.indexOf(l) >= 0;
+  });
+  if (FT) {
+    var q = FT.toLowerCase();
+    items = items.filter(function(i){
+      var d = proj.ist ? (proj.ist[i.id] || {}) : {};
+      return i.profile.toLowerCase().indexOf(q) >= 0 ||
+             i.grade.toLowerCase().indexOf(q) >= 0 ||
+             (d.manualGrade||'').toLowerCase().indexOf(q) >= 0 ||
+             (i.level||'').toLowerCase().indexOf(q) >= 0 ||
+             (d.manualLevel||'').toLowerCase().indexOf(q) >= 0 ||
+             (d.manualComment||'').toLowerCase().indexOf(q) >= 0 ||
+             (i.comment||'').toLowerCase().indexOf(q) >= 0;
+    });
   }
   return items;
 }
-function calcStats(items) {
-  const p=S.projects[S.activeId];
-  let sW=0,sA=0,iW=0,iA=0,eP=0,swC=0,saC=0;
-  items.forEach(i=>{
-    sW+=i.wgtSum; sA+=i.areaSum;
-    const r=calcIst(i,p.istData[i.id]);
-    if (r.istQty!==null){eP++;iW+=r.istWgt;iA+=r.istArea;swC+=i.wgtSum;saC+=i.areaSum;}
-  });
-  return {sW,sA,iW,iA,eP,total:items.length,dW:iW-swC,dA:iA-saC,prog:items.length?eP/items.length*100:0};
+
+function togArr(arr, val) {
+  var i = arr.indexOf(val);
+  if (i >= 0) arr.splice(i, 1); else arr.push(val);
 }
-function refreshStats() {
-  const p=S.projects[S.activeId];
-  if (!p) return;
-  const items=getFiltered();
-  const st=calcStats(items);
-  const set=(id,val,sub,cls)=>{
-    const el=document.getElementById(id);
-    if (!el) return;
-    const sv=el.querySelector('.sv');
-    const ss=el.querySelector('.ss');
-    if (sv){sv.textContent=val;sv.className='sv'+(cls?' '+cls:'');}
-    if (ss&&sub!==undefined) ss.textContent=sub;
-  };
-  set('st-sw',fmt(st.sW,3),fmt(st.sW/1000,3)+' t');
-  set('st-sa',fmt(st.sA,3)+' m²','');
-  set('st-iw',fmt(st.iW,3),fmt(st.iW/1000,3)+' t','grn');
-  set('st-ia',fmt(st.iA,3)+' m²','','blu');
-  set('st-dw',(st.dW>0?'+':'')+fmt(st.dW,3)+' kg','',Math.abs(st.dW)<0.001?'':st.dW<0?'neg':'pos');
-  set('st-da',(st.dA>0?'+':'')+fmt(st.dA,3)+' m²','',Math.abs(st.dA)<0.00001?'':st.dA<0?'neg':'pos');
-  set('st-pr',fmt(st.prog,1)+'%',`${st.eP}/${st.total} Pos.`);
-  const pb=document.getElementById('prog-bar-fill');
-  if (pb) pb.style.width=Math.min(st.prog,100)+'%';
+function tgG(v)  { togArr(FG, v); FP = []; renderAll(); }
+function tgP(v)  { togArr(FP, v); renderAll(); }
+function tgGR(v) { togArr(FGR, v); renderAll(); }
+function tgL(v)  { togArr(FL, v); renderAll(); }
+function tgFT(v) { FT = v; renderTable(); updateStatsDisplay(); }
+function resetF(){ resetFilters(); renderAll(); }
+
+// ═══════════════════════════════════════════════
+// SELECTION & BULK
+// ═══════════════════════════════════════════════
+function togSel(id) { if (SEL[id]) delete SEL[id]; else SEL[id] = true; renderAll(); }
+function togAll() {
+  var items = getFiltered();
+  var allSel = items.length > 0 && items.every(function(i){ return SEL[i.id]; });
+  SEL = {};
+  if (!allSel) items.forEach(function(i){ SEL[i.id] = true; });
+  renderAll();
 }
 
-// ═══════════════════════════════════════════════════════════
-//  EXPORT
-// ═══════════════════════════════════════════════════════════
+function applyBulk() {
+  var proj = P[AID];
+  if (!proj) return;
+  if (!proj.ist) proj.ist = {};
+  var ids = Object.keys(SEL);
+  for (var i = 0; i < ids.length; i++) {
+    var id = ids[i];
+    if (!proj.ist[id]) proj.ist[id] = {};
+    if (BG !== '') proj.ist[id].manualGrade   = BG;
+    if (BL !== '') proj.ist[id].manualLength  = pn(BL);
+    if (BLV!== '') proj.ist[id].manualLevel   = BLV;
+    if (BC !== '') proj.ist[id].manualComment = BC;
+  }
+  SEL={}; BG=''; BL=''; BLV=''; BC='';
+  saveAll(); renderAll();
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════
 function doExport(onlyDiff) {
-  const p=S.projects[S.activeId];
-  if (!p) return;
-  let items=getFiltered();
-  if (onlyDiff) items=items.filter(it=>{
-    const d=p.istData[it.id];
-    const r=calcIst(it,d);
-    if (r.istQty===null) return false;
-    const ig=d?.manualGrade||it.grade;
-    const il=d?.manualLength||it.len;
-    return Math.abs(r.dWgt)>0.0005||ig!==it.grade||Math.abs(il-it.len)>0.01;
-  });
-  if (!items.length){toast('Keine Positionen zum Exportieren','err');return;}
-  const r3=n=>Math.round(n*1000)/1000;
-  const rows=items.map(it=>{
-    const d=p.istData[it.id]||{};
-    const r=calcIst(it,d);
-    const istQty=r.istQty??0, istWgt=r.istWgt??0, istArea=r.istArea??0;
-    const istLen=d.manualLength||it.len;
+  var proj = P[AID];
+  if (!proj) return;
+  var items = getFiltered();
+  if (onlyDiff) {
+    items = items.filter(function(item){
+      var d = proj.ist ? (proj.ist[item.id] || {}) : {};
+      var r = calcIst(item, d);
+      if (!r.has) return false;
+      var ig = d.manualGrade || item.grade;
+      var il = d.manualLength || item.len;
+      return Math.abs(r.dWgt) > 0.0005 || ig !== item.grade || Math.abs(il - item.len) > 0.01;
+    });
+  }
+  if (!items.length) { toast('Keine Positionen', 'err'); return; }
+  var rows = items.map(function(item){
+    var d = proj.ist ? (proj.ist[item.id] || {}) : {};
+    var r = calcIst(item, d);
+    var istLen = d.manualLength || item.len;
+    var r3 = function(n){ return Math.round(n*1000)/1000; };
     return {
-      'Profil':it.profile,'Material Soll':it.grade,'Material Ist':d.manualGrade||it.grade,
-      'Länge Einzel Soll [mm]':r3(it.len),'Länge Ist [mm]':r3(istLen),'Länge Gesamt Soll [mm]':r3(it.lenSum),
-      'Stück Soll':it.qty,'Stück Ist':istQty,
-      'Gew. Soll [kg]':r3(it.wgtSum),'Gew. Ist [kg]':r3(istWgt),'Gew. Δ [kg]':r3(r.dWgt??0),
-      'Fläche Soll [m²]':r3(it.areaSum),'Fläche Ist [m²]':r3(istArea),'Fläche Δ [m²]':r3(r.dArea??0),
-      'Ebene':d.manualLevel||it.level||'','Kommentar':d.manualComment||it.comment||''
+      'Profil': item.profile,
+      'Material Soll': item.grade,
+      'Material Ist': d.manualGrade || item.grade,
+      'Länge Einzel Soll [mm]': r3(item.len),
+      'Länge Ist [mm]': r3(istLen),
+      'Länge Gesamt Soll [mm]': r3(item.lenSum),
+      'Stück Soll': item.qty,
+      'Stück Ist': r.has ? r.istQty : '',
+      'Gewicht Soll [kg]': r3(item.wgtSum),
+      'Gewicht Ist [kg]': r.has ? r3(r.istWgt) : '',
+      'Gewicht Δ [kg]': r.has ? r3(r.dWgt) : '',
+      'Fläche Soll [m²]': r3(item.areaSum),
+      'Fläche Ist [m²]': r.has ? r3(r.istArea) : '',
+      'Fläche Δ [m²]': r.has ? r3(r.dArea) : '',
+      'Ebene': d.manualLevel || item.level || '',
+      'Kommentar': d.manualComment || item.comment || ''
     };
   });
-  const ws=XLSX.utils.json_to_sheet(rows);
-  const wb2=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb2,ws,onlyDiff?'Abweichungen':'Gesamtliste');
-  XLSX.writeFile(wb2,`${onlyDiff?'ABW':'EXPORT'}_${p.nr||p.name}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  var ws = XLSX.utils.json_to_sheet(rows);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, onlyDiff ? 'Abweichungen' : 'Gesamtliste');
+  var fname = (onlyDiff ? 'ABW' : 'EXPORT') + '_' + (proj.nr||proj.name) + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, fname);
 }
 
-// ═══════════════════════════════════════════════════════════
-//  BULK
-// ═══════════════════════════════════════════════════════════
-function applyBulk() {
-  const p=S.projects[S.activeId];
-  if (!p) return;
-  S.sel.forEach(id=>{
-    if (!p.istData[id]) p.istData[id]={};
-    if (S.bGrade!='') p.istData[id].manualGrade=S.bGrade;
-    if (S.bLen!='') p.istData[id].manualLength=pn(S.bLen);
-    if (S.bLevel!='') p.istData[id].manualLevel=S.bLevel;
-    if (S.bComment!='') p.istData[id].manualComment=S.bComment;
-  });
-  S.sel=new Set(); S.bGrade=''; S.bLen=''; S.bLevel=''; S.bComment='';
-  save(); render();
-}
-
-// ═══════════════════════════════════════════════════════════
-//  SELECTION
-// ═══════════════════════════════════════════════════════════
-function toggleSel(id){
-  if (S.sel.has(id)) S.sel.delete(id); else S.sel.add(id);
-  render();
-}
-function toggleAll(){
-  const items=getFiltered();
-  if (S.sel.size===items.length) S.sel=new Set();
-  else S.sel=new Set(items.map(i=>i.id));
-  render();
-}
-
-// ═══════════════════════════════════════════════════════════
-//  FILTER
-// ═══════════════════════════════════════════════════════════
-function tog(arr, val){const i=arr.indexOf(val);i>=0?arr.splice(i,1):arr.push(val);}
-function tgG(v){tog(S.fg,v);S.fp=[];render();}
-function tgP(v){tog(S.fp,v);render();}
-function tgGr(v){tog(S.fgr,v);render();}
-function tgL(v){tog(S.fl,v);render();}
-function tgSW(v){S.ft=v;renderTable();refreshStats();}
-function resetF(){S.fg=[];S.fp=[];S.fgr=[];S.fl=[];S.ft='';render();}
-
-// ═══════════════════════════════════════════════════════════
-//  KEYBOARD NAV (Enter → nächste Zeile)
-// ═══════════════════════════════════════════════════════════
-function navEnter(e,idx){
-  if (e.key!=='Enter') return;
+// ═══════════════════════════════════════════════
+// KEYBOARD NAV
+// ═══════════════════════════════════════════════
+function navEnter(e, idx) {
+  if (e.key !== 'Enter') return;
   e.preventDefault();
-  const inputs=document.querySelectorAll('input[data-ist]');
-  if (inputs[idx+1]){inputs[idx+1].focus();inputs[idx+1].select();}
+  var inputs = document.querySelectorAll('input[data-ist]');
+  if (inputs[idx + 1]) { inputs[idx + 1].focus(); inputs[idx + 1].select(); }
 }
 
-// ═══════════════════════════════════════════════════════════
-//  TOAST
-// ═══════════════════════════════════════════════════════════
-function toast(msg,type='ok'){
-  const t=document.getElementById('toast');
-  t.className=type==='ok'?'tok':'ter'; t.textContent=msg; t.style.display='block';
-  clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',3000);
+// ═══════════════════════════════════════════════
+// BUILD TABLE ROWS
+// ═══════════════════════════════════════════════
+function buildRows(items, proj) {
+  if (!items.length) {
+    return '<tr><td colspan="18" style="text-align:center;padding:36px;color:#444">Keine Positionen — Soll-Liste laden oder Filter anpassen</td></tr>';
+  }
+  var html = '';
+  for (var idx = 0; idx < items.length; idx++) {
+    var item = items[idx];
+    var d = proj.ist ? (proj.ist[item.id] || {}) : {};
+    var r = calcIst(item, d);
+    var istLen = d.manualLength || item.len;
+    var cLenSum = r.has ? (r.istQty * istLen) : (item.qty * item.len);
+    var sel = !!SEL[item.id];
+    var mGrade   = d.manualGrade   !== undefined ? d.manualGrade   : '';
+    var mLevel   = d.manualLevel   !== undefined ? d.manualLevel   : (item.level || '');
+    var mComment = d.manualComment !== undefined ? d.manualComment : (item.comment || '');
+    var mLen     = d.manualLength  !== undefined ? d.manualLength  : '';
+    var dWcls = r.has ? (Math.abs(r.dWgt) < 0.0005 ? 'r tdim' : r.dWgt < 0 ? 'r tneg' : 'r tpos') : 'r tdim';
+    var dAcls = r.has ? (Math.abs(r.dArea) < 0.000001 ? 'r tdim' : r.dArea < 0 ? 'r tneg' : 'r tpos') : 'r tdim';
+    var esc = function(s){ return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); };
+
+    html += '<tr class="' + (sel ? 'sel' : '') + '" data-id="' + esc(item.id) + '">';
+    html += '<td><button class="ck" onclick="togSel(\'' + esc(item.id) + '\')"><span class="ckb' + (sel?' on':'') + '">✓</span></button></td>';
+    html += '<td class="tw">' + item.profile + '</td>';
+    html += '<td><span style="background:var(--bg);border:1px solid var(--b1);padding:1px 5px;border-radius:2px;font-size:9px;font-family:monospace;color:#777">' + (item.grade||'---') + '</span></td>';
+    html += '<td class="tbbg"><input class="ci bi2" style="width:85px" value="' + esc(mGrade) + '" placeholder="' + esc(item.grade||'S...') + '" onchange="setManualField(\'' + esc(item.id) + '\',\'manualGrade\',this.value)"></td>';
+    html += '<td class="r tdim tdbg">' + fm(item.len, 0) + '</td>';
+    html += '<td class="tbbg"><input class="ci bi2" style="width:70px;text-align:right" type="number" value="' + esc(mLen) + '" placeholder="' + item.len + '" onchange="setManualField(\'' + esc(item.id) + '\',\'manualLength\',this.value)"></td>';
+    html += '<td class="r' + (r.has ? ' tg tdbg' : ' tdim tdbg') + '">' + fm(cLenSum, 0) + '</td>';
+    html += '<td class="r" style="color:#777">' + item.qty + '</td>';
+    html += '<td class="r tdim tdbg">' + fm(item.wgt, 3) + '</td>';
+    html += '<td class="r tw tdbg">' + fm(item.wgtSum, 3) + '</td>';
+    html += '<td class="r tblu">' + fm(item.areaSum, 3) + '</td>';
+    html += '<td class="tgbg"><input class="ci gi" style="width:62px;text-align:right" type="number" data-ist="' + idx + '" value="' + (r.has ? r.istQty : '') + '" placeholder="' + item.qty + '" onchange="setIstQty(\'' + esc(item.id) + '\',this.value)" onkeydown="navEnter(event,' + idx + ')"></td>';
+    html += '<td class="r tgrn tgbg">' + (r.has ? fm(r.istWgt, 3) : '—') + '</td>';
+    html += '<td class="' + dWcls + '">' + (r.has ? ((r.dWgt > 0 ? '+' : '') + fm(r.dWgt, 3)) : '—') + '</td>';
+    html += '<td class="r tblu tgbg">' + (r.has ? fm(r.istArea, 3) : '—') + '</td>';
+    html += '<td class="' + dAcls + '">' + (r.has ? ((r.dArea > 0 ? '+' : '') + fm(r.dArea, 3)) : '—') + '</td>';
+    html += '<td><div class="cw" style="min-width:110px"><span>▤</span><input value="' + esc(mLevel) + '" placeholder="Ebene..." onchange="setManualField(\'' + esc(item.id) + '\',\'manualLevel\',this.value)"></div></td>';
+    html += '<td><div class="cw" style="min-width:130px;color:#888"><span>✎</span><input style="color:#888" value="' + esc(mComment) + '" placeholder="Notiz..." onchange="setManualField(\'' + esc(item.id) + '\',\'manualComment\',this.value)"></div></td>';
+    html += '</tr>';
+  }
+  return html;
 }
 
-// ═══════════════════════════════════════════════════════════
-//  CHECKBOX HTML
-// ═══════════════════════════════════════════════════════════
-function cbHtml(on){return `<span class="cbx${on?' on':''}">✓</span>`;}
-
-// ═══════════════════════════════════════════════════════════
-//  RENDER SIDEBAR
-// ═══════════════════════════════════════════════════════════
-function renderSidebar(){
-  const el=document.getElementById('proj-list');
-  const ids=Object.keys(S.projects);
-  if (!ids.length){el.innerHTML=`<div style="padding:18px 12px;font-size:11px;color:#444">Noch keine Projekte.</div>`;return;}
-  el.innerHTML=ids.map(id=>{
-    const p=S.projects[id];
-    return `<div class="pi${id===S.activeId?' active':''}" onclick="selectProject('${id}')">
-      <span class="pn">${p.nr?`[${p.nr}] `:''}${p.name}</span>
-      <button class="pd" onclick="event.stopPropagation();deleteProject('${id}')" title="Projekt löschen">🗑</button>
-    </div>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════════════════
-//  RENDER TABLE ONLY (für Suche ohne vollen Rebuild)
-// ═══════════════════════════════════════════════════════════
-function renderTable(){
-  const p=S.projects[S.activeId];
-  if (!p) return;
-  const items=getFiltered();
-  const tbody=document.getElementById('tbody');
+// ═══════════════════════════════════════════════
+// RENDER TABLE ONLY
+// ═══════════════════════════════════════════════
+function renderTable() {
+  var proj = P[AID];
+  if (!proj) return;
+  var tbody = document.getElementById('tbody');
   if (!tbody) return;
-  tbody.innerHTML=buildRows(items,p);
+  var items = getFiltered();
+  tbody.innerHTML = buildRows(items, proj);
 }
 
-function buildRows(items,p){
-  if (!items.length) return `<tr><td colspan="17" style="text-align:center;padding:40px;color:#444">Keine Positionen — Soll-Liste laden oder Filter anpassen</td></tr>`;
-  const selAll=S.sel.size===items.length&&items.length>0;
-  return items.map((item,idx)=>{
-    const d=p.istData[item.id]||{};
-    const {istQty,istWgt,istArea,dWgt,dArea}=calcIst(item,d);
-    const istLen=d.manualLength||item.len;
-    const cLenSum=istQty!==null?(istQty*istLen):(item.qty*item.len);
-    const sel=S.sel.has(item.id);
-    const mGrade=d.manualGrade??'';
-    const mLevel=d.manualLevel??item.level??'';
-    const mComment=d.manualComment??item.comment??'';
-    const mLen=d.manualLength??'';
-    const dWgtCls=dWgt===null?'r dim':Math.abs(dWgt)<0.0005?'r dim':dWgt<0?'r neg':'r pos';
-    const dAreCls=dArea===null?'r dim':Math.abs(dArea)<0.000001?'r dim':dArea<0?'r neg':'r pos';
-
-    return `<tr class="${sel?'sel':''}" data-id="${item.id}">
-      <td><button class="cb" onclick="toggleSel('${item.id}')">${cbHtml(sel)}</button></td>
-      <td class="w">${item.profile}</td>
-      <td><span style="background:var(--bg);border:1px solid var(--bor);padding:2px 6px;border-radius:3px;font-size:9px;font-family:monospace;color:#888">${item.grade||'---'}</span></td>
-      <td class="bbg"><input class="ci blui" style="width:88px" value="${mGrade}" placeholder="${item.grade||'S...'}" onchange="setField('${item.id}','manualGrade',this.value)"></td>
-      <td class="r dim dbg">${fmtN(item.len,0)}</td>
-      <td class="bbg"><input class="ci blui" style="width:72px;text-align:right" type="number" value="${mLen}" placeholder="${item.len}" onchange="setField('${item.id}','manualLength',this.value)"></td>
-      <td class="${istQty!==null?'r gl dbg':'r dim dbg'}">${fmtN(cLenSum,0)}</td>
-      <td class="r" style="color:#777">${item.qty}</td>
-      <td class="r dim dbg">${fmt(item.wgt,3)}</td>
-      <td class="r w dbg">${fmt(item.wgtSum,3)}</td>
-      <td class="r blu">${fmt(item.areaSum,3)}</td>
-      <td class="gbg"><input class="ci grni" style="width:65px;text-align:right" type="number" data-ist="${idx}" value="${istQty!==null?istQty:''}" placeholder="${item.qty}" onchange="setIstQty('${item.id}',this.value)" onkeydown="navEnter(event,${idx})"></td>
-      <td class="r grn gbg">${istWgt!==null?fmt(istWgt,3):'—'}</td>
-      <td class="${dWgtCls}">${dWgt!==null?((dWgt>0?'+':'')+fmt(dWgt,3)):'—'}</td>
-      <td class="r blu gbg">${istArea!==null?fmt(istArea,3):'—'}</td>
-      <td class="${dAreCls}">${dArea!==null?((dArea>0?'+':'')+fmt(dArea,3)):'—'}</td>
-      <td><div class="cwrap" style="min-width:110px"><span class="icon">▤</span><input value="${mLevel}" placeholder="Ebene..." style="color:#a5b4fc;font-weight:700" onchange="setField('${item.id}','manualLevel',this.value)"></div></td>
-      <td><div class="cwrap" style="min-width:130px"><span class="icon">✎</span><input value="${mComment}" placeholder="Notiz..." style="color:#888" onchange="setField('${item.id}','manualComment',this.value)"></div></td>
-    </tr>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════════════════
-//  RENDER MAIN
-// ═══════════════════════════════════════════════════════════
-function render(){
-  renderSidebar();
-  const main=document.getElementById('main');
-  const p=S.activeId?S.projects[S.activeId]:null;
-  if (!p){
-    main.innerHTML=`<div id="welcome"><div class="wi">🏗</div><h2>Projekt auswählen</h2></div>`;
+// ═══════════════════════════════════════════════
+// RENDER SIDEBAR
+// ═══════════════════════════════════════════════
+function renderSidebar() {
+  var el = document.getElementById('plist');
+  var ids = Object.keys(P);
+  if (!ids.length) {
+    el.innerHTML = '<div style="padding:16px 10px;font-size:11px;color:#444">Noch keine Projekte.</div>';
     return;
   }
-  const items=getFiltered();
-  const allItems=p.allItems||[];
-  const st=calcStats(items);
-  const selAll=S.sel.size===items.length&&items.length>0;
-
-  // Build filter options
-  const allGrps=[...new Set(allItems.map(i=>i.group))].sort();
-  let pool=allItems; if (S.fg.length) pool=allItems.filter(i=>S.fg.includes(i.group));
-  const allProfs=[...new Set(pool.map(i=>i.profile))].sort();
-  const allGrades=[...new Set(allItems.map(i=>p.istData[i.id]?.manualGrade||i.grade||'---'))].sort();
-  const allLevels=[...new Set(allItems.map(i=>p.istData[i.id]?.manualLevel||i.level||'[Ohne Ebene]'))].sort((a,b)=>a==='[Ohne Ebene]'?-1:b==='[Ohne Ebene]'?1:a.localeCompare(b));
-
-  const chip=(label,arr,cls,fn)=>`<button class="chip${arr.includes(label)?' '+cls:''}" onclick="${fn}('${label.replace(/'/g,"\\'")}')">${label}</button>`;
-
-  main.innerHTML=`
-    <div id="pbar">
-      <div class="left">
-        <div class="nr">${p.nr?`Projekt ${p.nr}`:''}</div>
-        <h2>${p.name}</h2>
-      </div>
-      <div class="right">
-        <span style="font-size:10px;color:#555">${allItems.length} Pos. geladen</span>
-        <button class="btn btn-del" onclick="deleteActiveProject()">🗑 Projekt löschen</button>
-      </div>
-    </div>
-
-    <div id="scroll">
-
-      <div id="stats">
-        <div class="sc"><div class="sl">Soll-Gewicht</div><div class="sv" id="st-sw">${fmt(st.sW,3)}</div><div class="ss" id="st-sw-s">${fmt(st.sW/1000,3)} t</div></div>
-        <div class="sc"><div class="sl">Soll-Fläche</div><div class="sv" id="st-sa">${fmt(st.sA,3)} m²</div><div class="ss"></div></div>
-        <div class="sc"><div class="sl">Ist-Gewicht</div><div class="sv grn" id="st-iw">${fmt(st.iW,3)}</div><div class="ss">${fmt(st.iW/1000,3)} t</div></div>
-        <div class="sc"><div class="sl">Ist-Fläche</div><div class="sv blu" id="st-ia">${fmt(st.iA,3)} m²</div><div class="ss"></div></div>
-        <div class="sc"><div class="sl">Δ Gewicht</div><div class="sv ${Math.abs(st.dW)<0.001?'':st.dW<0?'neg':'pos'}" id="st-dw">${(st.dW>0?'+':'')+fmt(st.dW,3)} kg</div><div class="ss"></div></div>
-        <div class="sc"><div class="sl">Δ Fläche</div><div class="sv ${Math.abs(st.dA)<0.00001?'':st.dA<0?'neg':'pos'}" id="st-da">${(st.dA>0?'+':'')+fmt(st.dA,3)} m²</div><div class="ss"></div></div>
-        <div class="sc"><div class="sl">Fortschritt</div><div class="sv" id="st-pr">${fmt(st.prog,1)}%</div><div class="ss">${st.eP}/${st.total} Pos.</div></div>
-      </div>
-
-      <div id="prog-bar-wrap"><div id="prog-bar-fill" style="width:${Math.min(st.prog,100)}%"></div></div>
-
-      ${S.sel.size>0?`
-      <div id="bulk">
-        <span class="bc">☑ ${S.sel.size} markiert</span>
-        <input class="bi" placeholder="Material..." value="${S.bGrade}" oninput="S.bGrade=this.value">
-        <input class="bi" type="number" placeholder="Länge [mm]..." value="${S.bLen}" oninput="S.bLen=this.value">
-        <input class="bi" placeholder="Ebene..." value="${S.bLevel}" oninput="S.bLevel=this.value">
-        <input class="bi" placeholder="Kommentar..." value="${S.bComment}" oninput="S.bComment=this.value">
-        <button class="bapply" onclick="applyBulk()">Zuweisen</button>
-        <button class="bcancel" onclick="S.sel=new Set();render()">Abbrechen</button>
-      </div>`:''}
-
-      <div id="abar">
-        <button class="btn btn-gold" onclick="document.getElementById('fSoll').click()">▲ Soll-Liste laden</button>
-        <button class="btn btn-ghost" onclick="document.getElementById('fIst').click()">▲ Ist-Mengen laden</button>
-        <button class="btn btn-exp" onclick="doExport(false)">⬇ Excel Export</button>
-        <button class="btn btn-abw" onclick="doExport(true)">⚠ Abweichungs-Export</button>
-        <div id="sw">
-          <span style="color:#555;font-size:12px">🔍</span>
-          <input placeholder="Suchen (Profil, Güte, Ebene, Kommentar...)" value="${S.ft}" oninput="tgSW(this.value)">
-        </div>
-      </div>
-
-      <div id="fbar">
-        <div><div class="ft">1. Profil-Gruppen</div><div class="fchips">${allGrps.map(g=>chip(g,S.fg,'cg','tgG')).join('')}</div></div>
-        <div><div class="ft">2. Spezifische Profile</div><div class="fchips fscroll">${allProfs.map(pr=>chip(pr,S.fp,'cg','tgP')).join('')}</div></div>
-        <div><div class="ft">3. Material / Güte</div><div class="fchips fscroll">${allGrades.map(g=>chip(g,S.fgr,'co','tgGr')).join('')}</div></div>
-        <div><div class="ft">4. Ebene / Höhe</div><div class="fchips fscroll">${allLevels.map(l=>chip(l,S.fl,'cb','tgL')).join('')}</div></div>
-        <div id="freset-row"><button class="btn-rst" onclick="resetF()">Filter zurücksetzen</button></div>
-      </div>
-
-      <div id="twrap"><div id="tscroll">
-        <table id="tbl">
-          <thead><tr>
-            <th style="width:32px"><button class="cb" onclick="toggleAll()">${cbHtml(selAll)}</button></th>
-            <th style="width:150px">Profil</th>
-            <th style="width:90px">Material (S)</th>
-            <th class="bh" style="width:95px">Material (I)</th>
-            <th class="r dh" style="width:85px">Länge (E)</th>
-            <th class="r bh" style="width:85px">Länge (I)</th>
-            <th class="r" style="width:85px">Länge (G)</th>
-            <th class="r" style="width:65px">Stk (S)</th>
-            <th class="r dh" style="width:85px">Wgt (E)</th>
-            <th class="r dh" style="width:90px">Wgt (G)</th>
-            <th class="r bh" style="width:85px">Fläche (G)</th>
-            <th class="r gh" style="width:72px">Stk (I)</th>
-            <th class="r gh" style="width:95px">Gew. Ist (G)</th>
-            <th class="r" style="width:90px">Δ Gewicht</th>
-            <th class="r bh" style="width:85px">Fläche Ist</th>
-            <th class="r" style="width:85px">Δ Fläche</th>
-            <th style="width:140px">Ebene / Höhe</th>
-            <th>Kommentar</th>
-          </tr></thead>
-          <tbody id="tbody">${buildRows(items,p)}</tbody>
-        </table>
-      </div></div>
-
-    </div>`;
+  var html = '';
+  for (var i = 0; i < ids.length; i++) {
+    var id = ids[i];
+    var proj = P[id];
+    var on = id === AID ? ' on' : '';
+    html += '<div class="pitem' + on + '" onclick="selectProject(\'' + id + '\')">';
+    html += '<span class="pn">' + (proj.nr ? '['+proj.nr+'] ' : '') + proj.name + '</span>';
+    html += '<button class="pd" onclick="event.stopPropagation();deleteProject(\'' + id + '\')" title="Löschen">🗑</button>';
+    html += '</div>';
+  }
+  el.innerHTML = html;
 }
 
-// ═══════════════════════════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════════════════════════
-loadStorage();
-render();
+// ═══════════════════════════════════════════════
+// RENDER ALL
+// ═══════════════════════════════════════════════
+function renderAll() {
+  renderSidebar();
+  var main = document.getElementById('main');
+  var proj = AID ? P[AID] : null;
+
+  if (!proj) {
+    main.innerHTML = '<div id="wel"><div class="wi">🏗</div><h2>Projekt auswählen</h2></div>';
+    return;
+  }
+
+  var items = getFiltered();
+  var allItems = proj.items || [];
+  var st = calcStats();
+  var selAll = items.length > 0 && items.every(function(i){ return SEL[i.id]; });
+
+  // Build filter option lists
+  var allGrps = [];
+  var grpMap = {};
+  for (var i = 0; i < allItems.length; i++) { var g = allItems[i].group; if (!grpMap[g]) { grpMap[g] = 1; allGrps.push(g); } }
+  allGrps.sort();
+
+  var profPool = FG.length ? allItems.filter(function(i){ return FG.indexOf(i.group) >= 0; }) : allItems;
+  var allProfs = [];
+  var profMap = {};
+  for (var i = 0; i < profPool.length; i++) { var pr = profPool[i].profile; if (!profMap[pr]) { profMap[pr] = 1; allProfs.push(pr); } }
+  allProfs.sort();
+
+  var allGrades = [];
+  var gradeMap = {};
+  for (var i = 0; i < allItems.length; i++) {
+    var d = proj.ist ? (proj.ist[allItems[i].id] || {}) : {};
+    var gr = d.manualGrade || allItems[i].grade || '---';
+    if (!gradeMap[gr]) { gradeMap[gr] = 1; allGrades.push(gr); }
+  }
+  allGrades.sort();
+
+  var allLevels = [];
+  var levelMap = {};
+  for (var i = 0; i < allItems.length; i++) {
+    var d = proj.ist ? (proj.ist[allItems[i].id] || {}) : {};
+    var lv = d.manualLevel || allItems[i].level || '[Ohne Ebene]';
+    if (!levelMap[lv]) { levelMap[lv] = 1; allLevels.push(lv); }
+  }
+  allLevels.sort(function(a,b){ return a==='[Ohne Ebene]'?-1:b==='[Ohne Ebene]'?1:a.localeCompare(b); });
+
+  function chips(arr, active, fn, cls) {
+    return arr.map(function(v){
+      var on = active.indexOf(v) >= 0;
+      return '<button class="chip' + (on?' '+cls:'') + '" onclick="' + fn + '(\''+v.replace(/'/g,"\\'")+'\')">' + v + '</button>';
+    }).join('');
+  }
+
+  var selCount = Object.keys(SEL).length;
+  var dWcls = Math.abs(st.dW)<0.001?'':'sv '+(st.dW<0?'neg':'pos');
+  var dAcls = Math.abs(st.dA)<0.00001?'':'sv '+(st.dA<0?'neg':'pos');
+
+  main.innerHTML =
+    '<div id="pb">' +
+      '<div class="l">' +
+        (proj.nr ? '<div class="nr">Projekt ' + proj.nr + '</div>' : '') +
+        '<h2>' + proj.name + '</h2>' +
+      '</div>' +
+      '<div class="r">' +
+        '<span style="font-size:10px;color:#555">' + allItems.length + ' Pos. geladen</span>' +
+        '<button class="btn-del" onclick="deleteProject(\'' + AID + '\')">🗑 Projekt löschen</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div id="scr">' +
+
+    '<div id="stats">' +
+      '<div class="sc" id="st0"><div class="sl">Soll-Gewicht</div><div class="sv">' + fm(st.sW,3) + '</div><div class="ss">' + fm(st.sW/1000,3) + ' t</div></div>' +
+      '<div class="sc" id="st1"><div class="sl">Soll-Fläche</div><div class="sv">' + fm(st.sA,3) + ' m²</div><div class="ss"></div></div>' +
+      '<div class="sc" id="st2"><div class="sl">Ist-Gewicht</div><div class="sv grn">' + fm(st.iW,3) + '</div><div class="ss">' + fm(st.iW/1000,3) + ' t</div></div>' +
+      '<div class="sc" id="st3"><div class="sl">Ist-Fläche</div><div class="sv blu">' + fm(st.iA,3) + ' m²</div><div class="ss"></div></div>' +
+      '<div class="sc" id="st4"><div class="sl">Δ Gewicht</div><div class="sv ' + (Math.abs(st.dW)<0.001?'':st.dW<0?'neg':'pos') + '">' + (st.dW>0?'+':'') + fm(st.dW,3) + ' kg</div><div class="ss"></div></div>' +
+      '<div class="sc" id="st5"><div class="sl">Δ Fläche</div><div class="sv ' + (Math.abs(st.dA)<0.00001?'':st.dA<0?'neg':'pos') + '">' + (st.dA>0?'+':'') + fm(st.dA,3) + ' m²</div><div class="ss"></div></div>' +
+      '<div class="sc" id="st6"><div class="sl">Fortschritt</div><div class="sv">' + fm(st.prog,1) + '%</div><div class="ss">' + st.eP + '/' + st.tot + ' Pos.</div></div>' +
+    '</div>' +
+
+    '<div id="progwrap"><div id="progfill" style="width:' + Math.min(st.prog,100) + '%"></div></div>' +
+
+    (selCount > 0 ?
+      '<div id="bulk">' +
+        '<span style="font-weight:800;color:#c7d2fe;font-size:11px;padding-right:8px;border-right:1px solid rgba(99,102,241,.4)">☑ ' + selCount + ' markiert</span>' +
+        '<input class="bi" placeholder="Material..." value="' + BG + '" oninput="BG=this.value">' +
+        '<input class="bi" type="number" placeholder="Länge [mm]..." value="' + BL + '" oninput="BL=this.value">' +
+        '<input class="bi" placeholder="Ebene..." value="' + BLV + '" oninput="BLV=this.value">' +
+        '<input class="bi" placeholder="Kommentar..." value="' + BC + '" oninput="BC=this.value">' +
+        '<button class="bk-ok" onclick="applyBulk()">Zuweisen</button>' +
+        '<button class="bk-no" onclick="SEL={};renderAll()">Abbrechen</button>' +
+      '</div>' : '') +
+
+    '<div id="abar">' +
+      '<button class="btn btn-gold" onclick="document.getElementById(\'fSoll\').click()">▲ Soll-Liste laden</button>' +
+      '<button class="btn btn-gh" onclick="document.getElementById(\'fIst\').click()">▲ Ist-Mengen laden</button>' +
+      '<button class="btn btn-exp" onclick="doExport(false)">⬇ Excel Export</button>' +
+      '<button class="btn btn-abw" onclick="doExport(true)">⚠ Abweichungs-Export</button>' +
+      '<div id="sw"><span style="color:#555;font-size:12px">🔍</span><input placeholder="Suchen (Profil, Güte, Ebene, Kommentar...)" value="' + FT + '" oninput="tgFT(this.value)"></div>' +
+    '</div>' +
+
+    '<div id="fbar">' +
+      '<div><div class="ft">1. Profil-Gruppen</div><div class="fc">' + chips(allGrps, FG, 'tgG', 'cg') + '</div></div>' +
+      '<div><div class="ft">2. Spezifische Profile</div><div class="fc fsc">' + chips(allProfs, FP, 'tgP', 'cg') + '</div></div>' +
+      '<div><div class="ft">3. Material / Güte</div><div class="fc fsc">' + chips(allGrades, FGR, 'tgGR', 'co') + '</div></div>' +
+      '<div><div class="ft">4. Ebene / Höhe</div><div class="fc fsc">' + chips(allLevels, FL, 'tgL', 'cb') + '</div></div>' +
+      '<div id="frrow"><button onclick="resetF()">Filter zurücksetzen</button></div>' +
+    '</div>' +
+
+    '<div id="twrap"><div id="tscr">' +
+      '<table id="tbl">' +
+        '<thead><tr>' +
+          '<th style="width:30px"><button class="ck" onclick="togAll()"><span class="ckb' + (selAll?' on':'') + '">✓</span></button></th>' +
+          '<th style="width:145px">Profil</th>' +
+          '<th style="width:88px">Material (S)</th>' +
+          '<th class="bh" style="width:92px">Material (I)</th>' +
+          '<th class="r dh" style="width:82px">Länge (E)</th>' +
+          '<th class="r bh" style="width:82px">Länge (I)</th>' +
+          '<th class="r" style="width:82px">Länge (G)</th>' +
+          '<th class="r" style="width:62px">Stk (S)</th>' +
+          '<th class="r dh" style="width:82px">Wgt (E)</th>' +
+          '<th class="r dh" style="width:88px">Wgt (G)</th>' +
+          '<th class="r bh" style="width:82px">Fläche (G)</th>' +
+          '<th class="r gh" style="width:68px">Stk (I)</th>' +
+          '<th class="r gh" style="width:92px">Gew. Ist (G)</th>' +
+          '<th class="r" style="width:88px">Δ Gewicht</th>' +
+          '<th class="r bh" style="width:82px">Fläche Ist</th>' +
+          '<th class="r" style="width:82px">Δ Fläche</th>' +
+          '<th style="width:135px">Ebene / Höhe</th>' +
+          '<th>Kommentar</th>' +
+        '</tr></thead>' +
+        '<tbody id="tbody">' + buildRows(items, proj) + '</tbody>' +
+      '</table>' +
+    '</div></div>' +
+
+    '</div>';
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+loadAll();
+renderAll();
 </script>
 </body>
 </html>
