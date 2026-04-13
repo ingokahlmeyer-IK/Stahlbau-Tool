@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stahlbau Kontroll-App</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold: #EAB312; --red: #CC1135; --bg: #1a1a1b; --surface: #242526;
+  --surface2: #2d2e2f; --border: #3a3b3c; --border2: #4a4b4c;
+  --text: #e4e4e4; --gray: #888; --green: #4ade80; --blue: #818cf8; --rose: #f87171;
+}
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; font-size: 13px; }
+::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-track { background: var(--bg); } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+button { cursor: pointer; font-family: inherit; }
+input { font-family: inherit; }
+
+/* LAYOUT */
+#app { display: flex; height: calc(100vh - 56px); overflow: hidden; }
+
+/* HEADER */
+header { height: 56px; border-bottom: 2px solid var(--gold); background: var(--surface); display: flex; align-items: center; padding: 0 24px; gap: 12px; flex-shrink: 0; z-index: 10; }
+.header-title { font-weight: 800; font-size: 17px; }
+.header-title span { color: var(--gold); }
+.header-sub { margin-left: auto; text-align: right; font-size: 10px; color: #555; line-height: 1.4; }
+
+/* SIDEBAR */
+aside { width: 240px; min-width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.sidebar-head h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #555; font-weight: 700; }
+.btn-new { background: var(--gold); color: #000; border: none; border-radius: 5px; padding: 5px 12px; font-size: 11px; font-weight: 800; transition: opacity 0.15s; }
+.btn-new:hover { opacity: 0.85; }
+.project-list { flex: 1; overflow-y: auto; padding: 8px; }
+.project-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; margin-bottom: 3px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
+.project-item:hover { background: var(--surface2); }
+.project-item.active { background: var(--surface2); border-color: var(--gold); }
+.project-item .pname { font-weight: 600; color: #fff; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.project-item .pdel { color: #444; font-size: 13px; padding: 2px 4px; border: none; background: none; opacity: 0; transition: all 0.15s; flex-shrink: 0; }
+.project-item:hover .pdel { opacity: 1; }
+.project-item .pdel:hover { color: var(--red); }
+
+/* MAIN */
+main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.project-bar { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+.project-bar .pnr { font-size: 10px; color: var(--gold); font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; }
+.project-bar h2 { font-size: 16px; font-weight: 800; color: #fff; }
+
+/* SCROLL AREA */
+.scroll-area { flex: 1; overflow-y: auto; padding: 16px 20px; background: var(--bg); }
+
+/* STAT CARDS */
+.stat-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; text-align: center; }
+.stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.7px; color: #555; font-weight: 700; margin-bottom: 4px; }
+.stat-value { font-size: 16px; font-weight: 800; color: #fff; }
+.stat-sub { font-size: 9px; color: #555; margin-top: 2px; }
+.stat-value.green { color: var(--green); }
+.stat-value.blue { color: var(--blue); }
+.stat-value.red { color: var(--rose); }
+.stat-value.pos { color: var(--green); }
+.stat-value.neg { color: var(--rose); }
+
+/* BULK BAR */
+.bulk-bar { background: rgba(99,102,241,0.15); border: 1px solid #6366f1; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.bulk-bar .bulk-count { font-weight: 800; color: #c7d2fe; font-size: 12px; padding-right: 10px; border-right: 1px solid rgba(99,102,241,0.4); }
+.bulk-input { background: var(--bg); border: 1px solid #6366f1; border-radius: 5px; padding: 5px 10px; font-size: 11px; color: #fff; outline: none; width: 110px; font-weight: 700; }
+.btn-bulk-apply { background: #6366f1; color: #fff; border: none; border-radius: 5px; padding: 5px 14px; font-size: 11px; font-weight: 800; transition: background 0.15s; }
+.btn-bulk-apply:hover { background: #818cf8; }
+.btn-bulk-cancel { background: none; border: none; color: #a5b4fc; font-size: 11px; font-weight: 700; }
+
+/* ACTION BAR */
+.action-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; border: none; transition: all 0.15s; }
+.btn-gold { background: var(--gold); color: #000; }
+.btn-gold:hover { opacity: 0.85; }
+.btn-ghost { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { background: var(--border); }
+.btn-export { background: var(--surface2); border: 1px solid var(--border); color: var(--gold); }
+.btn-export:hover { background: var(--border); }
+.btn-abw { background: rgba(204,17,53,0.1); border: 1px solid rgba(204,17,53,0.4); color: #fca5a5; }
+.btn-abw:hover { background: rgba(204,17,53,0.2); }
+.search-wrap { flex: 1; min-width: 220px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; display: flex; align-items: center; gap: 8px; transition: border-color 0.15s; }
+.search-wrap:focus-within { border-color: var(--gold); }
+.search-wrap input { background: none; border: none; outline: none; color: #fff; font-size: 11px; width: 100%; }
+.search-wrap input::placeholder { color: #444; }
+
+/* FILTER BAR */
+.filter-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+.filter-section { }
+.filter-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: #555; font-weight: 800; margin-bottom: 6px; }
+.filter-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.filter-scroll { max-height: 80px; overflow-y: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 4px; }
+.chip { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1px solid var(--border); background: var(--bg); color: #888; transition: all 0.12s; }
+.chip:hover { border-color: #666; color: #ccc; }
+.chip.active-gold { background: var(--gold); color: #000; border-color: var(--gold); }
+.chip.active-orange { background: #f97316; color: #fff; border-color: #f97316; }
+.chip.active-blue { background: #6366f1; color: #fff; border-color: #6366f1; }
+.filter-footer { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 8px; text-align: right; }
+.btn-reset { background: none; border: none; color: var(--red); font-size: 10px; font-weight: 700; }
+.btn-reset:hover { text-decoration: underline; }
+
+/* TABLE */
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 10px; min-width: 1800px; }
+thead { position: sticky; top: 0; z-index: 5; }
+thead th { background: var(--border2); color: #fff; padding: 10px 10px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 800; white-space: nowrap; border-bottom: 1px solid #555; }
+thead th.num { text-align: right; }
+thead th.green-h { background: rgba(34,197,94,0.15); color: #86efac; }
+thead th.blue-h { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+thead th.dark { background: rgba(0,0,0,0.2); }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:hover { background: rgba(255,255,255,0.03); }
+tbody tr.selected { background: rgba(99,102,241,0.1); }
+td { padding: 7px 10px; color: #ccc; white-space: nowrap; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.bold-white { color: #fff; font-weight: 800; }
+td.gold { color: var(--gold); font-weight: 800; }
+td.green { color: var(--green); font-weight: 800; }
+td.blue { color: var(--blue); font-weight: 800; }
+td.pos { color: var(--green); font-weight: 800; }
+td.neg { color: var(--rose); font-weight: 800; }
+td.muted { color: #444; }
+td.dark-bg { background: rgba(0,0,0,0.12); }
+td.green-bg { background: rgba(34,197,94,0.06); }
+td.blue-bg { background: rgba(99,102,241,0.06); }
+
+/* TABLE INPUTS */
+.cell-input { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 7px; color: #fff; outline: none; font-size: 10px; font-weight: 700; font-family: inherit; transition: border-color 0.12s; }
+.cell-input:focus { border-color: var(--gold); }
+.cell-input.green-input { color: var(--green); border-color: rgba(34,197,94,0.3); }
+.cell-input.green-input:focus { border-color: var(--green); }
+.cell-input.blue-input { color: var(--blue); border-color: rgba(99,102,241,0.3); }
+.cell-input.blue-input:focus { border-color: var(--blue); }
+.cell-wrap { display: flex; align-items: center; gap: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; transition: border-color 0.12s; }
+.cell-wrap:focus-within { border-color: var(--gold); }
+.cell-wrap .icon { color: #444; font-size: 9px; flex-shrink: 0; }
+.cell-wrap input { background: none; border: none; outline: none; color: #a5b4fc; font-size: 10px; font-weight: 700; width: 100%; font-family: inherit; }
+
+/* SELECT CHECKBOX */
+.sel-btn { background: none; border: none; padding: 3px; color: #444; transition: color 0.12s; }
+.sel-btn:hover, .sel-btn.active { color: var(--gold); }
+.sel-box { width: 14px; height: 14px; border: 2px solid currentColor; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; }
+.sel-box.checked { background: var(--gold); border-color: var(--gold); color: #000; }
+
+/* WELCOME */
+.welcome { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #333; }
+.welcome .big-icon { font-size: 60px; margin-bottom: 16px; opacity: 0.4; }
+.welcome h2 { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; opacity: 0.4; }
+
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(6px); }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 420px; max-width: 95vw; overflow: hidden; }
+.modal-head { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface2); }
+.modal-head h3 { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; }
+.modal-head .close-btn { background: none; border: none; color: #555; font-size: 18px; line-height: 1; transition: color 0.12s; }
+.modal-head .close-btn:hover { color: #fff; }
+.modal-body { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+.modal-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; color: #fff; outline: none; font-size: 13px; font-weight: 700; font-family: inherit; transition: border-color 0.15s; }
+.modal-input:focus { border-color: var(--gold); }
+.modal-foot { padding: 16px 22px; border-top: 1px solid var(--border); background: var(--surface2); display: flex; justify-content: flex-end; gap: 12px; align-items: center; }
+.btn-cancel { background: none; border: none; color: #555; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; transition: color 0.12s; }
+.btn-cancel:hover { color: #fff; }
+.btn-create { background: var(--gold); color: #000; border: none; border-radius: 10px; padding: 10px 28px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; transition: opacity 0.15s; }
+.btn-create:hover { opacity: 0.85; }
+
+/* TOAST */
+#toast { position: fixed; bottom: 20px; right: 20px; padding: 10px 18px; border-radius: 8px; font-size: 12px; font-weight: 700; z-index: 9999; display: none; animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.toast-ok { background: #14532d; color: var(--green); border: 1px solid var(--green); }
+.toast-err { background: #7f1d1d; color: #fca5a5; border: 1px solid #fca5a5; }
+
+@media (max-width: 1200px) {
+  .stat-grid { grid-template-columns: repeat(4, 1fr); }
+  .filter-bar { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">⚙ Stahl<span>bau</span> <span style="color:#555;font-weight:300;margin:0 6px;">|</span> <span style="font-weight:400;color:#888;font-size:14px;">Controlling</span></div>
+  <div class="header-sub">Hoffmeier Industrieanlagen<br>GmbH &amp; Co. KG</div>
+</header>
+
+<div id="app">
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="sidebar-head">
+      <h3>Projekte</h3>
+      <button class="btn-new" onclick="openModal()">+ Neu</button>
+    </div>
+    <div class="project-list" id="projectList"></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main id="mainArea">
+    <div class="welcome">
+      <div class="big-icon">🏗</div>
+      <h2>Projekt auswählen</h2>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Projekt anlegen</h3>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input class="modal-input" id="inp-nr" placeholder="Projektnummer" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('inp-name').focus()">
+      <input class="modal-input" id="inp-name" placeholder="Projektbezeichnung" autocomplete="off" onkeydown="if(event.key==='Enter')createProject()">
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal()">Abbrechen</button>
+      <button class="btn-create" onclick="createProject()">Erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- FILE INPUTS -->
+<input type="file" id="fileSoll" accept=".xlsx,.xls" style="display:none" onchange="processFile(event,'soll')">
+<input type="file" id="fileIst"  accept=".xlsx,.xls" style="display:none" onchange="processFile(event,'ist')">
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let S = {
+  projects: {},
+  activeId: null,
+  filterText: '',
+  selGroups: [],
+  selProfiles: [],
+  selGrades: [],
+  selLevels: [],
+  selectedIds: new Set(),
+  bulkGrade: '', bulkLength: '', bulkLevel: '', bulkComment: ''
+};
+
+// ─── PERSIST ─────────────────────────────────────────────────────────────────
+function save() { try { localStorage.setItem('stahlbau_v40', JSON.stringify(S.projects)); } catch(e){} }
+function load() {
+  try {
+    const d = localStorage.getItem('stahlbau_v40');
+    if (d) {
+      S.projects = JSON.parse(d);
+      // Altdaten-Bereinigung
+      for (const p of Object.values(S.projects)) {
+        if (p.allItems) p.allItems = p.allItems.filter(i => !i.isSubtotal);
+      }
+      const pids = Object.keys(S.projects);
+      if (pids.length) S.activeId = pids[pids.length - 1];
+    }
+  } catch(e) {}
+}
+
+// ─── PROFILE GROUP ───────────────────────────────────────────────────────────
+function detectGroup(profile) {
+  if (!profile) return 'Sonstiges';
+  const p = profile.toString().toUpperCase().trim();
+  if (/^BLECH|^PL|^FL/.test(p)) return 'Bleche';
+  if (/^HEA|^HIA/.test(p)) return 'HEA';
+  if (/^HEB|^HIB/.test(p)) return 'HEB';
+  if (/^HEM|^HIM/.test(p)) return 'HEM';
+  if (/^IPE/.test(p)) return 'IPE';
+  if (/^U[0-9]|^UPE|^UNP/.test(p)) return 'U-Profile';
+  if (/^ROR|^RHS|^SHS|^CHS|^ROHR/.test(p)) return 'Rohre';
+  if (/^L[0-9]|^WIN/.test(p)) return 'Winkelstahl';
+  if (/^T[0-9]/.test(p)) return 'T-Stahl';
+  if (/^FLACH|^FB/.test(p)) return 'Flachstahl';
+  if (/^RUND|^RD/.test(p)) return 'Rundstahl';
+  return 'Sonstiges';
+}
+
+// ─── NUMBER HELPERS ───────────────────────────────────────────────────────────
+function parseNum(v) {
+  if (v === undefined || v === null || v === '') return 0;
+  const n = parseFloat(String(v).replace(/\s/g,'').replace(',','.'));
+  return isNaN(n) ? 0 : n;
+}
+function fmt(v, d=3) {
+  if (typeof v !== 'number' || isNaN(v)) return '—';
+  return v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+// ─── XLSX PARSER ─────────────────────────────────────────────────────────────
+function matchCol(headers, patterns) {
+  for (const p of patterns) {
+    const re = new RegExp(p, 'i');
+    const idx = headers.findIndex(h => re.test(String(h||'').replace(/:$/,'').trim()));
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function parseXLSX(data) {
+  const wb = XLSX.read(data, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: false });
+  const kw = /profil|profile|grade|güte|qty|stück|length|länge|weight|gewicht|area|fläche|comment|bemerk|level|ebene/i;
+  let bestRow = -1, bestScore = 0;
+  for (let i = 0; i < Math.min(25, rows.length); i++) {
+    const score = rows[i].filter(c => typeof c === 'string' && kw.test(String(c))).length;
+    if (score > bestScore) { bestScore = score; bestRow = i; }
+  }
+  if (bestRow < 0) return null;
+  const headers = rows[bestRow].map(h => String(h||'').trim().replace(/:$/,''));
+  const col = {
+    profile: matchCol(headers, ['profil','profile','bauteil','bezeich','description']),
+    grade:   matchCol(headers, ['grade','güte','stahl','quality','material']),
+    qty:     matchCol(headers, ['qty','stück','stueck','menge','anz','pcs']),
+    len:     matchCol(headers, ['^length \\[mm\\]','^länge \\[mm\\]','length$','länge$']),
+    lenSum:  matchCol(headers, ['length sum','länge gesamt','sum.*length','sum.*länge']),
+    wgt:     matchCol(headers, ['^weight \\[kg\\]','^gewicht \\[kg\\]','weight$','gewicht$']),
+    wgtSum:  matchCol(headers, ['weight sum','sum.*weight','gewicht.*sum','gesamtgewicht','total.*weight']),
+    area:    matchCol(headers, ['^area \\[m','^fläche \\[m','area$','fläche$']),
+    areaSum: matchCol(headers, ['area sum','sum.*area','fläche.*sum','gesamtfläche']),
+    comment: matchCol(headers, ['comment','bemerk','notiz','remark']),
+    level:   matchCol(headers, ['level','ebene','nivelle','geschoss','etage','floor'])
+  };
+  if (col.profile < 0) return null;
+  const items = [];
+  for (let i = bestRow + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const rawProfile = String(r[col.profile]||'').trim();
+    if (!rawProfile) continue;
+    if (/^(title|date|rev|page|projekt)/i.test(rawProfile)) continue;
+    if (/sub.?total|gesamt|summe|^total/i.test(rawProfile)) continue;
+    if (r.some(c => /^\s*total\s*:/i.test(String(c||'')))) continue;
+    const qty    = parseNum(r[col.qty]);
+    const len    = parseNum(r[col.len]);
+    const wgt    = parseNum(r[col.wgt]);
+    const wgtSum = parseNum(r[col.wgtSum]) || (qty * wgt);
+    const area   = parseNum(r[col.area]);
+    const areaSum= parseNum(r[col.areaSum]) || (qty * area);
+    if (wgtSum === 0 && qty === 0) continue;
+    items.push({
+      id: `${rawProfile}||${String(r[col.grade]||'').trim()}||${len}||${qty}||${i}`,
+      profile: rawProfile,
+      grade:   col.grade >= 0 ? String(r[col.grade]||'').trim() : '',
+      qty, len,
+      lenSum:  parseNum(r[col.lenSum]) || (qty * len),
+      wgt, wgtSum, area, areaSum,
+      comment: col.comment >= 0 ? String(r[col.comment]||'').trim() : '',
+      level:   col.level   >= 0 ? String(r[col.level]  ||'').trim() : '',
+      group:   detectGroup(rawProfile)
+    });
+  }
+  return items;
+}
+
+// ─── FILE HANDLER ─────────────────────────────────────────────────────────────
+function processFile(e, mode) {
+  const file = e.target.files[0];
+  if (!file || !S.activeId) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const items = parseXLSX(new Uint8Array(ev.target.result));
+    if (!items || !items.length) { showToast('Keine Daten erkannt', 'err'); return; }
+    const p = S.projects[S.activeId];
+    if (mode === 'soll') {
+      p.allItems = [...(p.allItems||[]), ...items];
+      p.lists = [...(p.lists||[]), { filename: file.name, date: new Date().toLocaleDateString('de-DE'), itemCount: items.length }];
+      showToast(`✓ ${items.length} Positionen geladen`, 'ok');
+    } else {
+      items.forEach(it => {
+        if (!p.istData[it.id]) p.istData[it.id] = {};
+        p.istData[it.id].istQty = it.qty;
+        if (it.len > 0) p.istData[it.id].manualLength = it.len;
+      });
+      showToast(`✓ Ist-Mengen: ${items.length} Positionen`, 'ok');
+    }
+    save(); render();
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+}
+
+// ─── PROJECT MANAGEMENT ───────────────────────────────────────────────────────
+function openModal() { document.getElementById('modalOverlay').style.display='flex'; document.getElementById('inp-nr').value=''; document.getElementById('inp-name').value=''; setTimeout(()=>document.getElementById('inp-nr').focus(),50); }
+function closeModal() { document.getElementById('modalOverlay').style.display='none'; }
+function createProject() {
+  const nr = document.getElementById('inp-nr').value.trim();
+  const name = document.getElementById('inp-name').value.trim();
+  if (!nr && !name) return;
+  const id = Date.now().toString();
+  S.projects[id] = { id, nr, name, lists:[], istData:{}, allItems:[], created: new Date().toLocaleDateString('de-DE') };
+  S.activeId = id;
+  save(); closeModal(); render();
+}
+function deleteProject(id) {
+  if (!confirm(`Projekt löschen?`)) return;
+  delete S.projects[id];
+  if (S.activeId === id) S.activeId = Object.keys(S.projects)[0] || null;
+  save(); render();
+}
+function selectProject(id) { S.activeId = id; S.selGroups=[]; S.selProfiles=[]; S.selGrades=[]; S.selLevels=[]; S.filterText=''; S.selectedIds=new Set(); render(); }
+
+// ─── IST DATA ─────────────────────────────────────────────────────────────────
+function setIstQty(itemId, val) {
+  const p = S.projects[S.activeId];
+  if (!p.istData[itemId]) p.istData[itemId] = {};
+  if (val === '' || val === null) delete p.istData[itemId].istQty;
+  else p.istData[itemId].istQty = parseNum(val);
+  save(); updateStats();
+}
+function setManualField(itemId, field, val) {
+  const p = S.projects[S.activeId];
+  if (!p.istData[itemId]) p.istData[itemId] = {};
+  if (field === 'manualLength') { const n = parseNum(val); p.istData[itemId][field] = n > 0 ? n : undefined; }
+  else p.istData[itemId][field] = val;
+  save();
+}
+
+// ─── FILTER HELPERS ───────────────────────────────────────────────────────────
+function toggleFilter(arr, val) {
+  const idx = arr.indexOf(val);
+  if (idx >= 0) arr.splice(idx, 1); else arr.push(val);
+}
+function getFilteredItems() {
+  const p = S.projects[S.activeId];
+  if (!p) return [];
+  let items = p.allItems || [];
+  if (S.selGroups.length)   items = items.filter(i => S.selGroups.includes(detectGroup(i.profile)));
+  if (S.selProfiles.length) items = items.filter(i => S.selProfiles.includes(i.profile));
+  if (S.selGrades.length)   items = items.filter(i => S.selGrades.includes(p.istData[i.id]?.manualGrade || i.grade || '---'));
+  if (S.selLevels.length)   items = items.filter(i => S.selLevels.includes(p.istData[i.id]?.manualLevel || i.level || '[Ohne Ebene]'));
+  if (S.filterText) {
+    const q = S.filterText.toLowerCase();
+    items = items.filter(i =>
+      i.profile.toLowerCase().includes(q) ||
+      i.grade.toLowerCase().includes(q) ||
+      (p.istData[i.id]?.manualGrade||'').toLowerCase().includes(q) ||
+      (i.level||'').toLowerCase().includes(q) ||
+      (p.istData[i.id]?.manualLevel||'').toLowerCase().includes(q) ||
+      (p.istData[i.id]?.manualComment||'').toLowerCase().includes(q)
+    );
+  }
+  return items;
+}
+
+function calcStats(items) {
+  const p = S.projects[S.activeId];
+  let sW=0, sA=0, iW=0, iA=0, eP=0, swComp=0, saComp=0;
+  items.forEach(i => {
+    sW += i.wgtSum; sA += i.areaSum;
+    const d = p.istData[i.id];
+    const istQty = d?.istQty ?? null;
+    if (istQty !== null) {
+      eP++;
+      const cLen = d?.manualLength || i.len;
+      const qF = istQty / Math.max(i.qty, 1);
+      const lF = (i.len > 0 && cLen > 0) ? (cLen / i.len) : 1;
+      const factor = qF * lF;
+      iW += i.wgtSum * factor; iA += i.areaSum * factor;
+      swComp += i.wgtSum; saComp += i.areaSum;
+    }
+  });
+  return { sW, sA, iW, iA, eP, total: items.length, dW: iW - swComp, dA: iA - saComp, prog: items.length ? eP/items.length*100 : 0 };
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function doExport(onlyDiff) {
+  const p = S.projects[S.activeId];
+  let items = getFilteredItems();
+  if (onlyDiff) items = items.filter(it => {
+    const d = p.istData[it.id];
+    const istQty = d?.istQty ?? null;
+    const istLen = d?.manualLength || it.len;
+    const istGrade = d?.manualGrade || it.grade;
+    return (istQty !== null && istQty !== it.qty) || istGrade !== it.grade || Math.abs(istLen - it.len) > 0.01;
+  });
+  const r3 = n => Math.round(n*1000)/1000;
+  const rows = items.map(it => {
+    const d = p.istData[it.id];
+    const istQty = d?.istQty ?? 0;
+    const istLen = d?.manualLength || it.len;
+    const eqF = istQty / Math.max(it.qty, 1);
+    const elF = (it.len > 0 && istLen > 0) ? (istLen / it.len) : 1;
+    const factor = eqF * elF;
+    const istWgt = it.wgtSum * factor;
+    const istArea = it.areaSum * factor;
+    return {
+      'Profil / Position': it.profile, 'Material (Soll)': it.grade, 'Material (Ist)': d?.manualGrade || it.grade,
+      'Länge Einzel Soll [mm]': r3(it.len), 'Länge Ist [mm]': r3(istLen), 'Länge Gesamt Soll [mm]': r3(it.lenSum),
+      'Stück (Soll)': it.qty, 'Stück (Ist)': istQty,
+      'Gewicht Soll [kg]': r3(it.wgtSum), 'Gewicht Ist [kg]': r3(istWgt), 'Gewicht Δ [kg]': r3(istWgt - it.wgtSum),
+      'Fläche Soll [m²]': r3(it.areaSum), 'Fläche Ist [m²]': r3(istArea), 'Fläche Δ [m²]': r3(istArea - it.areaSum),
+      'Ebene': d?.manualLevel || it.level || '', 'Kommentar': d?.manualComment || it.comment || ''
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, onlyDiff ? 'Abweichungen' : 'Gesamtliste');
+  XLSX.writeFile(wb, `${onlyDiff?'ABWEICHUNGEN':'EXPORT'}_${p.nr||p.name}_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+// ─── BULK ─────────────────────────────────────────────────────────────────────
+function applyBulk() {
+  const p = S.projects[S.activeId];
+  S.selectedIds.forEach(id => {
+    if (!p.istData[id]) p.istData[id] = {};
+    if (S.bulkGrade  !== '') p.istData[id].manualGrade   = S.bulkGrade;
+    if (S.bulkLength !== '') p.istData[id].manualLength  = parseNum(S.bulkLength);
+    if (S.bulkLevel  !== '') p.istData[id].manualLevel   = S.bulkLevel;
+    if (S.bulkComment!== '') p.istData[id].manualComment = S.bulkComment;
+  });
+  S.selectedIds = new Set();
+  S.bulkGrade=''; S.bulkLength=''; S.bulkLevel=''; S.bulkComment='';
+  save(); render();
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.className = type==='ok' ? 'toast-ok' : 'toast-err';
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>{ t.style.display='none'; }, 3000);
+}
+
+// ─── RENDER HELPERS ───────────────────────────────────────────────────────────
+function chk(checked) {
+  return `<span class="sel-box${checked?' checked':''}">✓</span>`;
+}
+
+function updateStats() {
+  const items = getFilteredItems();
+  const st = calcStats(items);
+  const p = S.projects[S.activeId];
+  if (!p) return;
+  const setCard = (id, val, sub) => {
+    const el = document.getElementById(id);
+    if (el) { el.querySelector('.sv').textContent = val; if (sub !== undefined) el.querySelector('.ss').textContent = sub; }
+  };
+  setCard('sc-sw', fmt(st.sW,3)+' kg', fmt(st.sW/1000,3)+' t');
+  setCard('sc-sa', fmt(st.sA,3)+' m²', '');
+  setCard('sc-iw', fmt(st.iW,3)+' kg', fmt(st.iW/1000,3)+' t');
+  setCard('sc-ia', fmt(st.iA,3)+' m²', '');
+  const dwEl = document.getElementById('sc-dw');
+  if (dwEl) {
+    dwEl.querySelector('.sv').textContent = fmt(st.dW,3)+' kg';
+    dwEl.querySelector('.sv').className = 'sv stat-value '+(Math.abs(st.dW)<0.001?'':'') + (st.dW<0?'neg':st.dW>0?'pos':'');
+  }
+  const daEl = document.getElementById('sc-da');
+  if (daEl) {
+    daEl.querySelector('.sv').textContent = fmt(st.dA,3)+' m²';
+    daEl.querySelector('.sv').className = 'sv stat-value '+(st.dA<0?'neg':st.dA>0?'pos':'');
+  }
+  setCard('sc-prog', fmt(st.prog,1)+'%', `${st.eP}/${st.total} Pos.`);
+}
+
+// ─── RENDER SIDEBAR ───────────────────────────────────────────────────────────
+function renderSidebar() {
+  const el = document.getElementById('projectList');
+  const pids = Object.keys(S.projects);
+  if (!pids.length) { el.innerHTML = `<div style="padding:20px 12px;font-size:11px;color:#444;">Noch keine Projekte. Klicke + Neu.</div>`; return; }
+  el.innerHTML = pids.map(id => {
+    const p = S.projects[id];
+    const active = id === S.activeId;
+    return `<div class="project-item${active?' active':''}" onclick="selectProject('${id}')">
+      <span class="pname">${p.nr?`[${p.nr}] `:''}${p.name}</span>
+      <button class="pdel" onclick="event.stopPropagation();deleteProject('${id}')" title="Löschen">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ─── RENDER MAIN ──────────────────────────────────────────────────────────────
+function render() {
+  renderSidebar();
+  const main = document.getElementById('mainArea');
+  const p = S.activeId ? S.projects[S.activeId] : null;
+  if (!p) {
+    main.innerHTML = `<div class="welcome"><div class="big-icon">🏗</div><h2>Projekt auswählen</h2></div>`;
+    return;
+  }
+
+  const items = getFilteredItems();
+  const allItems = p.allItems || [];
+  const allGroups = [...new Set(allItems.map(i => detectGroup(i.profile)))].sort();
+  let profilePool = allItems;
+  if (S.selGroups.length) profilePool = allItems.filter(i => S.selGroups.includes(detectGroup(i.profile)));
+  const allProfiles = [...new Set(profilePool.map(i => i.profile))].sort();
+  const allGrades = [...new Set(allItems.map(i => p.istData[i.id]?.manualGrade || i.grade || '---'))].sort();
+  const allLevels = [...new Set(allItems.map(i => p.istData[i.id]?.manualLevel || i.level || '[Ohne Ebene]'))].sort((a,b)=>a==='[Ohne Ebene]'?-1:b==='[Ohne Ebene]'?1:a.localeCompare(b));
+
+  const st = calcStats(items);
+  const selAll = S.selectedIds.size === items.length && items.length > 0;
+
+  // chip helper
+  const chip = (val, active, cls) => `<button class="chip${active?' '+cls:''}" onclick="${cls==='active-gold'?`tgGroup('${val}')`:(cls==='active-orange'?`tgGrade('${val}')`:(cls==='active-blue'?`tgLevel('${val}')`:``))}">${val}</button>`;
+  const chipP = (val, active) => `<button class="chip${active?' active-gold':''}" onclick="tgProfile('${val}')">${val}</button>`;
+
+  // Build table rows
+  const rows = items.map((item, idx) => {
+    const d = p.istData[item.id] || {};
+    const istQty = d.istQty ?? null;
+    const mLen = d.manualLength;
+    const cLen = mLen || item.len;
+    const cLenSum = (istQty !== null ? istQty : item.qty) * cLen;
+    const qtyF = istQty === null ? 0 : (istQty / Math.max(item.qty, 1));
+    const lenF = (item.len > 0 && cLen > 0) ? (cLen / item.len) : 1;
+    const factor = istQty === null ? 0 : qtyF * lenF;
+    const istWgt = item.wgtSum * factor;
+    const dWgt = istQty === null ? null : istWgt - item.wgtSum;
+    const sel = S.selectedIds.has(item.id);
+    const dWgtCls = dWgt === null ? 'muted num' : Math.abs(dWgt) < 0.0005 ? 'muted num' : dWgt < 0 ? 'neg num' : 'pos num';
+    const mGrade = d.manualGrade;
+    const mLevel = d.manualLevel;
+    const mComment = d.manualComment;
+
+    return `<tr class="${sel?'selected':''}" data-id="${item.id}">
+      <td><button class="sel-btn${sel?' active':''}" onclick="toggleSel('${item.id}')">${chk(sel)}</button></td>
+      <td class="bold-white">${item.profile}</td>
+      <td><span style="background:var(--bg);border:1px solid var(--border);padding:2px 7px;border-radius:4px;font-size:9px;font-family:monospace;color:#888;">${item.grade||'---'}</span></td>
+      <td><input class="cell-input blue-input" style="width:90px" value="${mGrade||''}" placeholder="${item.grade||'S...'}" onchange="setManualField('${item.id}','manualGrade',this.value)"></td>
+      <td class="num muted dark-bg">${fmt(item.len,0)}</td>
+      <td class="blue-bg"><input class="cell-input blue-input" style="width:75px;text-align:right" type="number" value="${mLen||''}" placeholder="${item.len}" onchange="setManualField('${item.id}','manualLength',this.value)"></td>
+      <td class="num gold dark-bg">${fmt(cLenSum,0)}</td>
+      <td class="num" style="color:#888">${item.qty}</td>
+      <td class="num muted dark-bg">${fmt(item.wgt,3)}</td>
+      <td class="num bold-white dark-bg">${fmt(item.wgtSum,3)}</td>
+      <td class="num blue">${fmt(item.areaSum,3)}</td>
+      <td class="green-bg"><input class="cell-input green-input" style="width:70px;text-align:right" type="number" data-nav-id="ist-qty" value="${istQty!==null?istQty:''}" placeholder="${item.qty}" onchange="setIstQty('${item.id}',this.value)" onkeydown="navEnter(event,${idx})"></td>
+      <td class="num green green-bg">${istQty!==null?fmt(istWgt,3):'—'}</td>
+      <td class="${dWgtCls}">${dWgt!==null?((dWgt>0?'+':'')+fmt(dWgt,3)):'—'}</td>
+      <td><div class="cell-wrap" style="min-width:120px"><span class="icon">▤</span><input value="${mLevel||item.level||''}" placeholder="..." onchange="setManualField('${item.id}','manualLevel',this.value)" style="color:#a5b4fc;font-weight:700;font-size:10px;"></div></td>
+      <td><div class="cell-wrap" style="min-width:140px"><span class="icon">✎</span><input value="${mComment||item.comment||''}" placeholder="Notiz..." onchange="setManualField('${item.id}','manualComment',this.value)" style="color:#888;font-size:10px;"></div></td>
+    </tr>`;
+  }).join('');
+
+  main.innerHTML = `
+    <div class="project-bar">
+      <div class="pnr">${p.nr?`Projekt ${p.nr}`:''}</div>
+      <h2>${p.name}</h2>
+    </div>
+    <div class="scroll-area">
+
+      <!-- STAT CARDS -->
+      <div class="stat-grid">
+        <div class="stat-card" id="sc-sw"><div class="stat-label">Soll-Gewicht</div><div class="sv stat-value">${fmt(st.sW,3)} kg</div><div class="ss stat-sub">${fmt(st.sW/1000,3)} t</div></div>
+        <div class="stat-card" id="sc-sa"><div class="stat-label">Soll-Fläche</div><div class="sv stat-value">${fmt(st.sA,3)} m²</div><div class="ss stat-sub"></div></div>
+        <div class="stat-card" id="sc-iw"><div class="stat-label">Ist-Gewicht</div><div class="sv stat-value green">${fmt(st.iW,3)} kg</div><div class="ss stat-sub">${fmt(st.iW/1000,3)} t</div></div>
+        <div class="stat-card" id="sc-ia"><div class="stat-label">Ist-Fläche</div><div class="sv stat-value blue">${fmt(st.iA,3)} m²</div><div class="ss stat-sub"></div></div>
+        <div class="stat-card" id="sc-dw"><div class="stat-label">Differenz kg</div><div class="sv stat-value ${st.dW<0?'neg':st.dW>0?'pos':''}">${fmt(st.dW,3)} kg</div><div class="ss stat-sub"></div></div>
+        <div class="stat-card" id="sc-da"><div class="stat-label">Differenz m²</div><div class="sv stat-value ${st.dA<0?'neg':st.dA>0?'pos':''}">${fmt(st.dA,3)} m²</div><div class="ss stat-sub"></div></div>
+        <div class="stat-card" id="sc-prog"><div class="stat-label">Fortschritt</div><div class="sv stat-value">${fmt(st.prog,1)}%</div><div class="ss stat-sub">${st.eP}/${st.total} Pos.</div></div>
+      </div>
+
+      <!-- BULK BAR -->
+      ${S.selectedIds.size > 0 ? `
+      <div class="bulk-bar">
+        <span class="bulk-count">☑ ${S.selectedIds.size} markiert</span>
+        <input class="bulk-input" placeholder="Material..." value="${S.bulkGrade}" oninput="S.bulkGrade=this.value">
+        <input class="bulk-input" type="number" placeholder="Länge [mm]..." value="${S.bulkLength}" oninput="S.bulkLength=this.value">
+        <input class="bulk-input" placeholder="Ebene..." value="${S.bulkLevel}" oninput="S.bulkLevel=this.value">
+        <input class="bulk-input" placeholder="Kommentar..." value="${S.bulkComment}" oninput="S.bulkComment=this.value">
+        <button class="btn-bulk-apply" onclick="applyBulk()">Zuweisen</button>
+        <button class="btn-bulk-cancel" onclick="S.selectedIds=new Set();render()">Abbrechen</button>
+      </div>` : ''}
+
+      <!-- ACTION BAR -->
+      <div class="action-bar">
+        <button class="btn btn-gold" onclick="document.getElementById('fileSoll').click()">▲ Soll-Liste laden</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('fileIst').click()">▲ Ist-Mengen laden</button>
+        <button class="btn btn-export" onclick="doExport(false)">⬇ Excel Export</button>
+        <button class="btn btn-abw" onclick="doExport(true)">⚠ Abweichungs-Export</button>
+        <div class="search-wrap">
+          <span style="color:#555;font-size:12px;">🔍</span>
+          <input placeholder="Suchen (Profil, Güte, Ebene, Kommentar...)" value="${S.filterText}" oninput="S.filterText=this.value;renderTable()">
+        </div>
+      </div>
+
+      <!-- FILTER BAR -->
+      <div class="filter-bar">
+        <div class="filter-section">
+          <div class="filter-title">1. Profil-Gruppen</div>
+          <div class="filter-chips">${allGroups.map(g=>`<button class="chip${S.selGroups.includes(g)?' active-gold':''}" onclick="tgGroup('${g}')">${g}</button>`).join('')}</div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">2. Spezifische Profile</div>
+          <div class="filter-chips filter-scroll">${allProfiles.map(pr=>`<button class="chip${S.selProfiles.includes(pr)?' active-gold':''}" onclick="tgProfile('${pr}')">${pr}</button>`).join('')}</div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">3. Material (Güte)</div>
+          <div class="filter-chips filter-scroll">${allGrades.map(g=>`<button class="chip${S.selGrades.includes(g)?' active-orange':''}" onclick="tgGrade('${g}')">${g}</button>`).join('')}</div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">4. Ebene / Höhe</div>
+          <div class="filter-chips filter-scroll">${allLevels.map(l=>`<button class="chip${S.selLevels.includes(l)?' active-blue':''}" onclick="tgLevel('${l}')">${l}</button>`).join('')}</div>
+        </div>
+        <div class="filter-footer">
+          <button class="btn-reset" onclick="resetFilters()">Filter zurücksetzen</button>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table id="mainTable">
+            <thead>
+              <tr>
+                <th style="width:36px"><button class="sel-btn${selAll?' active':''}" onclick="toggleAll()">${chk(selAll)}</button></th>
+                <th style="width:160px">Profil / Position</th>
+                <th style="width:100px">Material (S)</th>
+                <th class="blue-h" style="width:100px">Material (I)</th>
+                <th class="num dark" style="width:90px">Länge (E)</th>
+                <th class="num blue-h" style="width:90px">Länge (I)</th>
+                <th class="num" style="width:90px">Länge (G)</th>
+                <th class="num" style="width:70px">Stück (S)</th>
+                <th class="num dark" style="width:90px">Wgt (E)</th>
+                <th class="num dark" style="width:90px">Wgt (G)</th>
+                <th class="num blue-h" style="width:90px">Fläche (G)</th>
+                <th class="num green-h" style="width:80px">Stück (I)</th>
+                <th class="num green-h" style="width:100px">Gew. Ist (G)</th>
+                <th class="num" style="width:90px">Differenz</th>
+                <th style="width:150px">Ebene / Höhe</th>
+                <th>Kommentar</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">${rows}</tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+// ─── FILTER TOGGLE FUNCTIONS ──────────────────────────────────────────────────
+function tgGroup(v)   { toggleFilter(S.selGroups, v); S.selProfiles=[]; renderTable(); }
+function tgProfile(v) { toggleFilter(S.selProfiles, v); renderTable(); }
+function tgGrade(v)   { toggleFilter(S.selGrades, v); renderTable(); }
+function tgLevel(v)   { toggleFilter(S.selLevels, v); renderTable(); }
+function resetFilters() { S.selGroups=[]; S.selProfiles=[]; S.selGrades=[]; S.selLevels=[]; S.filterText=''; render(); }
+
+function toggleSel(id) {
+  if (S.selectedIds.has(id)) S.selectedIds.delete(id); else S.selectedIds.add(id);
+  render();
+}
+function toggleAll() {
+  const items = getFilteredItems();
+  if (S.selectedIds.size === items.length) S.selectedIds = new Set();
+  else S.selectedIds = new Set(items.map(i => i.id));
+  render();
+}
+
+function navEnter(e, idx) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const inputs = document.querySelectorAll('input[data-nav-id="ist-qty"]');
+  if (inputs[idx+1]) { inputs[idx+1].focus(); inputs[idx+1].select(); }
+}
+
+// Fast re-render of table only (for search/filter without full rebuild)
+function renderTable() {
+  const p = S.projects[S.activeId];
+  if (!p) return;
+  const items = getFilteredItems();
+
+  // Update chips without full re-render
+  render();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+load();
+render();
+</script>
+</body>
+</html>
