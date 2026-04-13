@@ -6,771 +6,813 @@
 <title>Stahlbau Kontroll-App</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --gold: #EAB312; --red: #CC1135; --bg: #1a1a1b; --surface: #242526;
-  --surface2: #2d2e2f; --border: #3a3b3c; --border2: #4a4b4c;
-  --text: #e4e4e4; --gray: #888; --green: #4ade80; --blue: #818cf8; --rose: #f87171;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#EAB312;--red:#CC1135;--bg:#1a1a1b;--sur:#242526;--sur2:#2d2e2f;
+  --bor:#3a3b3c;--bor2:#4a4b4c;--txt:#e4e4e4;--grn:#4ade80;--blu:#818cf8;--ros:#f87171;
 }
-body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; font-size: 13px; }
-::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-track { background: var(--bg); } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-button { cursor: pointer; font-family: inherit; }
-input { font-family: inherit; }
-
-/* LAYOUT */
-#app { display: flex; height: calc(100vh - 56px); overflow: hidden; }
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:13px}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bor2);border-radius:3px}
+button,input{font-family:inherit;cursor:pointer}
+input{cursor:text}
 
 /* HEADER */
-header { height: 56px; border-bottom: 2px solid var(--gold); background: var(--surface); display: flex; align-items: center; padding: 0 24px; gap: 12px; flex-shrink: 0; z-index: 10; }
-.header-title { font-weight: 800; font-size: 17px; }
-.header-title span { color: var(--gold); }
-.header-sub { margin-left: auto; text-align: right; font-size: 10px; color: #555; line-height: 1.4; }
+#hdr{height:52px;border-bottom:2px solid var(--gold);background:var(--sur);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0}
+#hdr .logo{font-weight:900;font-size:16px}#hdr .logo span{color:var(--gold)}
+#hdr .sub{margin-left:auto;font-size:10px;color:#555;text-align:right;line-height:1.4}
+
+/* APP LAYOUT */
+#app{display:flex;height:calc(100vh - 52px);overflow:hidden}
 
 /* SIDEBAR */
-aside { width: 240px; min-width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-.sidebar-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.sidebar-head h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #555; font-weight: 700; }
-.btn-new { background: var(--gold); color: #000; border: none; border-radius: 5px; padding: 5px 12px; font-size: 11px; font-weight: 800; transition: opacity 0.15s; }
-.btn-new:hover { opacity: 0.85; }
-.project-list { flex: 1; overflow-y: auto; padding: 8px; }
-.project-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; margin-bottom: 3px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
-.project-item:hover { background: var(--surface2); }
-.project-item.active { background: var(--surface2); border-color: var(--gold); }
-.project-item .pname { font-weight: 600; color: #fff; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
-.project-item .pdel { color: #444; font-size: 13px; padding: 2px 4px; border: none; background: none; opacity: 0; transition: all 0.15s; flex-shrink: 0; }
-.project-item:hover .pdel { opacity: 1; }
-.project-item .pdel:hover { color: var(--red); }
+#sidebar{width:220px;min-width:220px;background:var(--sur);border-right:1px solid var(--bor);display:flex;flex-direction:column}
+#sb-head{padding:10px 14px;border-bottom:1px solid var(--bor);display:flex;align-items:center;justify-content:space-between}
+#sb-head h3{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#555;font-weight:700}
+.btn-new{background:var(--gold);color:#000;border:none;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:800}
+.btn-new:hover{opacity:.85}
+#proj-list{flex:1;overflow-y:auto;padding:6px}
+.pi{display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:7px;margin-bottom:2px;cursor:pointer;border:1px solid transparent;transition:all .12s}
+.pi:hover{background:var(--sur2)}
+.pi.active{background:var(--sur2);border-color:var(--gold)}
+.pi .pn{font-weight:600;color:#fff;font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pi .pd{background:none;border:none;color:#555;font-size:13px;padding:2px 4px;border-radius:3px;line-height:1;flex-shrink:0}
+.pi .pd:hover{background:rgba(204,17,53,.2);color:var(--red)}
 
 /* MAIN */
-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.project-bar { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
-.project-bar .pnr { font-size: 10px; color: var(--gold); font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; }
-.project-bar h2 { font-size: 16px; font-weight: 800; color: #fff; }
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#pbar{padding:8px 18px;border-bottom:1px solid var(--bor);background:var(--sur);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#pbar .left .nr{font-size:10px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.7px}
+#pbar .left h2{font-size:15px;font-weight:800;color:#fff}
+#pbar .right{display:flex;gap:8px;align-items:center}
 
 /* SCROLL AREA */
-.scroll-area { flex: 1; overflow-y: auto; padding: 16px 20px; background: var(--bg); }
+#scroll{flex:1;overflow-y:auto;padding:14px 18px;background:var(--bg)}
 
 /* STAT CARDS */
-.stat-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 16px; }
-.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; text-align: center; }
-.stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.7px; color: #555; font-weight: 700; margin-bottom: 4px; }
-.stat-value { font-size: 16px; font-weight: 800; color: #fff; }
-.stat-sub { font-size: 9px; color: #555; margin-top: 2px; }
-.stat-value.green { color: var(--green); }
-.stat-value.blue { color: var(--blue); }
-.stat-value.red { color: var(--rose); }
-.stat-value.pos { color: var(--green); }
-.stat-value.neg { color: var(--rose); }
+#stats{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:14px}
+.sc{background:var(--sur);border:1px solid var(--bor);border-radius:7px;padding:9px 11px;text-align:center}
+.sc .sl{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:#555;font-weight:700;margin-bottom:3px}
+.sc .sv{font-size:15px;font-weight:800;color:#fff}
+.sc .ss{font-size:9px;color:#555;margin-top:2px}
+.sv.grn{color:var(--grn)}.sv.blu{color:var(--blu)}.sv.pos{color:var(--grn)}.sv.neg{color:var(--ros)}
+
+/* PROGRESS BAR */
+#prog-bar-wrap{height:4px;background:var(--bor);border-radius:2px;margin-bottom:12px;overflow:hidden}
+#prog-bar-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .3s}
 
 /* BULK BAR */
-.bulk-bar { background: rgba(99,102,241,0.15); border: 1px solid #6366f1; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.bulk-bar .bulk-count { font-weight: 800; color: #c7d2fe; font-size: 12px; padding-right: 10px; border-right: 1px solid rgba(99,102,241,0.4); }
-.bulk-input { background: var(--bg); border: 1px solid #6366f1; border-radius: 5px; padding: 5px 10px; font-size: 11px; color: #fff; outline: none; width: 110px; font-weight: 700; }
-.btn-bulk-apply { background: #6366f1; color: #fff; border: none; border-radius: 5px; padding: 5px 14px; font-size: 11px; font-weight: 800; transition: background 0.15s; }
-.btn-bulk-apply:hover { background: #818cf8; }
-.btn-bulk-cancel { background: none; border: none; color: #a5b4fc; font-size: 11px; font-weight: 700; }
+#bulk{background:rgba(99,102,241,.12);border:1px solid #6366f1;border-radius:8px;padding:9px 12px;margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#bulk .bc{font-weight:800;color:#c7d2fe;font-size:11px;padding-right:8px;border-right:1px solid rgba(99,102,241,.4)}
+.bi{background:var(--bg);border:1px solid #6366f1;border-radius:4px;padding:4px 9px;font-size:11px;color:#fff;outline:none;width:105px;font-weight:700}
+.bapply{background:#6366f1;color:#fff;border:none;border-radius:4px;padding:5px 13px;font-size:11px;font-weight:800}
+.bapply:hover{background:#818cf8}
+.bcancel{background:none;border:none;color:#a5b4fc;font-size:11px;font-weight:700}
 
 /* ACTION BAR */
-.action-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-size: 11px; font-weight: 800; border: none; transition: all 0.15s; }
-.btn-gold { background: var(--gold); color: #000; }
-.btn-gold:hover { opacity: 0.85; }
-.btn-ghost { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
-.btn-ghost:hover { background: var(--border); }
-.btn-export { background: var(--surface2); border: 1px solid var(--border); color: var(--gold); }
-.btn-export:hover { background: var(--border); }
-.btn-abw { background: rgba(204,17,53,0.1); border: 1px solid rgba(204,17,53,0.4); color: #fca5a5; }
-.btn-abw:hover { background: rgba(204,17,53,0.2); }
-.search-wrap { flex: 1; min-width: 220px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; display: flex; align-items: center; gap: 8px; transition: border-color 0.15s; }
-.search-wrap:focus-within { border-color: var(--gold); }
-.search-wrap input { background: none; border: none; outline: none; color: #fff; font-size: 11px; width: 100%; }
-.search-wrap input::placeholder { color: #444; }
+#abar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:5px;font-size:11px;font-weight:800;border:none;transition:all .12s;white-space:nowrap}
+.btn-gold{background:var(--gold);color:#000}.btn-gold:hover{opacity:.85}
+.btn-ghost{background:var(--sur2);border:1px solid var(--bor);color:var(--txt)}.btn-ghost:hover{background:var(--bor)}
+.btn-exp{background:var(--sur2);border:1px solid var(--bor);color:var(--gold)}.btn-exp:hover{background:var(--bor)}
+.btn-abw{background:rgba(204,17,53,.1);border:1px solid rgba(204,17,53,.4);color:#fca5a5}.btn-abw:hover{background:rgba(204,17,53,.2)}
+.btn-del{background:rgba(204,17,53,.1);border:1px solid rgba(204,17,53,.35);color:#fca5a5;font-size:11px}.btn-del:hover{background:rgba(204,17,53,.22)}
+#sw{flex:1;min-width:200px;background:var(--sur);border:1px solid var(--bor);border-radius:5px;padding:6px 11px;display:flex;align-items:center;gap:7px}
+#sw:focus-within{border-color:var(--gold)}
+#sw input{background:none;border:none;outline:none;color:#fff;font-size:11px;width:100%}
+#sw input::placeholder{color:#444}
 
 /* FILTER BAR */
-.filter-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
-.filter-section { }
-.filter-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: #555; font-weight: 800; margin-bottom: 6px; }
-.filter-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.filter-scroll { max-height: 80px; overflow-y: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 4px; }
-.chip { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1px solid var(--border); background: var(--bg); color: #888; transition: all 0.12s; }
-.chip:hover { border-color: #666; color: #ccc; }
-.chip.active-gold { background: var(--gold); color: #000; border-color: var(--gold); }
-.chip.active-orange { background: #f97316; color: #fff; border-color: #f97316; }
-.chip.active-blue { background: #6366f1; color: #fff; border-color: #6366f1; }
-.filter-footer { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 8px; text-align: right; }
-.btn-reset { background: none; border: none; color: var(--red); font-size: 10px; font-weight: 700; }
-.btn-reset:hover { text-decoration: underline; }
+#fbar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;background:var(--sur);border:1px solid var(--bor);border-radius:7px;padding:12px;margin-bottom:12px}
+.ft{font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#555;font-weight:700;margin-bottom:5px}
+.fchips{display:flex;flex-wrap:wrap;gap:3px}
+.fscroll{max-height:72px;overflow-y:auto;background:var(--bg);border:1px solid var(--bor);border-radius:4px;padding:3px}
+.chip{padding:3px 7px;border-radius:3px;font-size:10px;font-weight:700;border:1px solid var(--bor);background:var(--bg);color:#777;transition:all .1s;cursor:pointer}
+.chip:hover{border-color:#666;color:#ccc}
+.chip.cg{background:var(--gold);color:#000;border-color:var(--gold)}
+.chip.co{background:#f97316;color:#fff;border-color:#f97316}
+.chip.cb{background:#6366f1;color:#fff;border-color:#6366f1}
+#freset-row{grid-column:1/-1;border-top:1px solid var(--bor);padding-top:7px;text-align:right}
+.btn-rst{background:none;border:none;color:var(--red);font-size:10px;font-weight:700}
+.btn-rst:hover{text-decoration:underline}
 
 /* TABLE */
-.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-.table-scroll { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 10px; min-width: 1800px; }
-thead { position: sticky; top: 0; z-index: 5; }
-thead th { background: var(--border2); color: #fff; padding: 10px 10px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 800; white-space: nowrap; border-bottom: 1px solid #555; }
-thead th.num { text-align: right; }
-thead th.green-h { background: rgba(34,197,94,0.15); color: #86efac; }
-thead th.blue-h { background: rgba(99,102,241,0.15); color: #a5b4fc; }
-thead th.dark { background: rgba(0,0,0,0.2); }
-tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
-tbody tr:hover { background: rgba(255,255,255,0.03); }
-tbody tr.selected { background: rgba(99,102,241,0.1); }
-td { padding: 7px 10px; color: #ccc; white-space: nowrap; }
-td.num { text-align: right; font-variant-numeric: tabular-nums; }
-td.bold-white { color: #fff; font-weight: 800; }
-td.gold { color: var(--gold); font-weight: 800; }
-td.green { color: var(--green); font-weight: 800; }
-td.blue { color: var(--blue); font-weight: 800; }
-td.pos { color: var(--green); font-weight: 800; }
-td.neg { color: var(--rose); font-weight: 800; }
-td.muted { color: #444; }
-td.dark-bg { background: rgba(0,0,0,0.12); }
-td.green-bg { background: rgba(34,197,94,0.06); }
-td.blue-bg { background: rgba(99,102,241,0.06); }
+#twrap{background:var(--sur);border:1px solid var(--bor);border-radius:9px;overflow:hidden}
+#tscroll{overflow-x:auto}
+#tbl{width:100%;border-collapse:collapse;font-size:10px;min-width:1750px}
+#tbl thead{position:sticky;top:0;z-index:5}
+#tbl thead th{background:var(--bor2);color:#fff;padding:9px 9px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.55px;font-weight:800;white-space:nowrap;border-bottom:1px solid #555}
+#tbl thead th.r{text-align:right}
+th.gh{background:rgba(34,197,94,.12);color:#86efac}
+th.bh{background:rgba(99,102,241,.12);color:#a5b4fc}
+th.dh{background:rgba(0,0,0,.18)}
+#tbl tbody tr{border-bottom:1px solid var(--bor);transition:background .08s}
+#tbl tbody tr:hover{background:rgba(255,255,255,.025)}
+#tbl tbody tr.sel{background:rgba(99,102,241,.08)}
+td{padding:6px 9px;color:#ccc;white-space:nowrap}
+td.r{text-align:right;font-variant-numeric:tabular-nums}
+td.w{color:#fff;font-weight:800}
+td.gl{color:var(--gold);font-weight:800}
+td.grn{color:var(--grn);font-weight:800}
+td.blu{color:var(--blu);font-weight:800}
+td.pos{color:var(--grn);font-weight:800}
+td.neg{color:var(--ros);font-weight:800}
+td.dim{color:#444}
+td.dbg{background:rgba(0,0,0,.1)}
+td.gbg{background:rgba(34,197,94,.05)}
+td.bbg{background:rgba(99,102,241,.05)}
 
-/* TABLE INPUTS */
-.cell-input { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 7px; color: #fff; outline: none; font-size: 10px; font-weight: 700; font-family: inherit; transition: border-color 0.12s; }
-.cell-input:focus { border-color: var(--gold); }
-.cell-input.green-input { color: var(--green); border-color: rgba(34,197,94,0.3); }
-.cell-input.green-input:focus { border-color: var(--green); }
-.cell-input.blue-input { color: var(--blue); border-color: rgba(99,102,241,0.3); }
-.cell-input.blue-input:focus { border-color: var(--blue); }
-.cell-wrap { display: flex; align-items: center; gap: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; transition: border-color 0.12s; }
-.cell-wrap:focus-within { border-color: var(--gold); }
-.cell-wrap .icon { color: #444; font-size: 9px; flex-shrink: 0; }
-.cell-wrap input { background: none; border: none; outline: none; color: #a5b4fc; font-size: 10px; font-weight: 700; width: 100%; font-family: inherit; }
+/* CELL INPUTS */
+.ci{background:var(--bg);border:1px solid var(--bor);border-radius:3px;padding:3px 6px;color:#fff;outline:none;font-size:10px;font-weight:700;font-family:inherit;transition:border-color .1s;width:100%}
+.ci:focus{border-color:var(--gold)}
+.ci.grni{color:var(--grn);border-color:rgba(74,222,128,.25)}
+.ci.grni:focus{border-color:var(--grn)}
+.ci.blui{color:var(--blu);border-color:rgba(129,140,248,.25)}
+.ci.blui:focus{border-color:var(--blu)}
+.cwrap{display:flex;align-items:center;gap:3px;background:var(--bg);border:1px solid var(--bor);border-radius:3px;padding:3px 6px;transition:border-color .1s}
+.cwrap:focus-within{border-color:var(--gold)}
+.cwrap .icon{color:#333;font-size:9px;flex-shrink:0}
+.cwrap input{background:none;border:none;outline:none;font-size:10px;font-weight:700;font-family:inherit;width:100%}
 
-/* SELECT CHECKBOX */
-.sel-btn { background: none; border: none; padding: 3px; color: #444; transition: color 0.12s; }
-.sel-btn:hover, .sel-btn.active { color: var(--gold); }
-.sel-box { width: 14px; height: 14px; border: 2px solid currentColor; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; }
-.sel-box.checked { background: var(--gold); border-color: var(--gold); color: #000; }
+/* CHECKBOX */
+.cb{background:none;border:none;padding:2px;color:#444;display:flex;align-items:center;justify-content:center}
+.cb:hover{color:var(--gold)}
+.cbx{width:13px;height:13px;border:2px solid currentColor;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:900}
+.cbx.on{background:var(--gold);border-color:var(--gold);color:#000}
 
 /* WELCOME */
-.welcome { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #333; }
-.welcome .big-icon { font-size: 60px; margin-bottom: 16px; opacity: 0.4; }
-.welcome h2 { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; opacity: 0.4; }
+#welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#2a2a2b}
+#welcome .wi{font-size:56px;margin-bottom:14px}
+#welcome h2{font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:2px}
 
 /* MODAL */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(6px); }
-.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 420px; max-width: 95vw; overflow: hidden; }
-.modal-head { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface2); }
-.modal-head h3 { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; }
-.modal-head .close-btn { background: none; border: none; color: #555; font-size: 18px; line-height: 1; transition: color 0.12s; }
-.modal-head .close-btn:hover { color: #fff; }
-.modal-body { padding: 24px; display: flex; flex-direction: column; gap: 14px; }
-.modal-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; color: #fff; outline: none; font-size: 13px; font-weight: 700; font-family: inherit; transition: border-color 0.15s; }
-.modal-input:focus { border-color: var(--gold); }
-.modal-foot { padding: 16px 22px; border-top: 1px solid var(--border); background: var(--surface2); display: flex; justify-content: flex-end; gap: 12px; align-items: center; }
-.btn-cancel { background: none; border: none; color: #555; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; transition: color 0.12s; }
-.btn-cancel:hover { color: #fff; }
-.btn-create { background: var(--gold); color: #000; border: none; border-radius: 10px; padding: 10px 28px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; transition: opacity 0.15s; }
-.btn-create:hover { opacity: 0.85; }
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(5px)}
+.md{background:var(--sur);border:1px solid var(--bor);border-radius:14px;width:400px;max-width:95vw;overflow:hidden}
+.mh{padding:16px 20px;border-bottom:1px solid var(--bor);background:var(--sur2);display:flex;justify-content:space-between;align-items:center}
+.mh h3{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:1.2px}
+.mh .mx{background:none;border:none;color:#555;font-size:16px;line-height:1}.mh .mx:hover{color:#fff}
+.mb{padding:20px;display:flex;flex-direction:column;gap:12px}
+.mi{width:100%;background:var(--bg);border:1px solid var(--bor);border-radius:8px;padding:11px 14px;color:#fff;outline:none;font-size:13px;font-weight:700;font-family:inherit}
+.mi:focus{border-color:var(--gold)}
+.mf{padding:14px 20px;border-top:1px solid var(--bor);background:var(--sur2);display:flex;justify-content:flex-end;gap:10px;align-items:center}
+.mcnl{background:none;border:none;color:#555;font-size:11px;font-weight:700;text-transform:uppercase}.mcnl:hover{color:#fff}
+.mok{background:var(--gold);color:#000;border:none;border-radius:8px;padding:9px 24px;font-size:11px;font-weight:900;text-transform:uppercase}.mok:hover{opacity:.85}
 
 /* TOAST */
-#toast { position: fixed; bottom: 20px; right: 20px; padding: 10px 18px; border-radius: 8px; font-size: 12px; font-weight: 700; z-index: 9999; display: none; animation: slideUp 0.3s ease; }
-@keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.toast-ok { background: #14532d; color: var(--green); border: 1px solid var(--green); }
-.toast-err { background: #7f1d1d; color: #fca5a5; border: 1px solid #fca5a5; }
+#toast{position:fixed;bottom:18px;right:18px;padding:9px 16px;border-radius:7px;font-size:12px;font-weight:700;z-index:9999;display:none}
+.tok{background:#14532d;color:var(--grn);border:1px solid var(--grn)}
+.ter{background:#7f1d1d;color:#fca5a5;border:1px solid #fca5a5}
 
-@media (max-width: 1200px) {
-  .stat-grid { grid-template-columns: repeat(4, 1fr); }
-  .filter-bar { grid-template-columns: repeat(2, 1fr); }
-}
+@media(max-width:1200px){#stats{grid-template-columns:repeat(4,1fr)}#fbar{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="header-title">⚙ Stahl<span>bau</span> <span style="color:#555;font-weight:300;margin:0 6px;">|</span> <span style="font-weight:400;color:#888;font-size:14px;">Controlling</span></div>
-  <div class="header-sub">Hoffmeier Industrieanlagen<br>GmbH &amp; Co. KG</div>
-</header>
+<div id="hdr">
+  <div class="logo">⚙ Stahl<span>bau</span> <span style="color:#444;font-weight:300;margin:0 8px">|</span><span style="font-weight:400;color:#777;font-size:13px">Controlling</span></div>
+  <div class="sub">Hoffmeier Industrieanlagen<br>GmbH &amp; Co. KG</div>
+</div>
 
 <div id="app">
-  <!-- SIDEBAR -->
-  <aside>
-    <div class="sidebar-head">
+  <div id="sidebar">
+    <div id="sb-head">
       <h3>Projekte</h3>
       <button class="btn-new" onclick="openModal()">+ Neu</button>
     </div>
-    <div class="project-list" id="projectList"></div>
-  </aside>
-
-  <!-- MAIN -->
-  <main id="mainArea">
-    <div class="welcome">
-      <div class="big-icon">🏗</div>
-      <h2>Projekt auswählen</h2>
-    </div>
-  </main>
+    <div id="proj-list"></div>
+  </div>
+  <div id="main">
+    <div id="welcome"><div class="wi">🏗</div><h2>Projekt auswählen</h2></div>
+  </div>
 </div>
 
 <!-- MODAL -->
-<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>Projekt anlegen</h3>
-      <button class="close-btn" onclick="closeModal()">✕</button>
+<div class="mo" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="md">
+    <div class="mh"><h3>Projekt anlegen</h3><button class="mx" onclick="closeModal()">✕</button></div>
+    <div class="mb">
+      <input class="mi" id="mnr" placeholder="Projektnummer" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('mname').focus()">
+      <input class="mi" id="mname" placeholder="Projektbezeichnung" autocomplete="off" onkeydown="if(event.key==='Enter')createProject()">
     </div>
-    <div class="modal-body">
-      <input class="modal-input" id="inp-nr" placeholder="Projektnummer" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('inp-name').focus()">
-      <input class="modal-input" id="inp-name" placeholder="Projektbezeichnung" autocomplete="off" onkeydown="if(event.key==='Enter')createProject()">
-    </div>
-    <div class="modal-foot">
-      <button class="btn-cancel" onclick="closeModal()">Abbrechen</button>
-      <button class="btn-create" onclick="createProject()">Erstellen</button>
+    <div class="mf">
+      <button class="mcnl" onclick="closeModal()">Abbrechen</button>
+      <button class="mok" onclick="createProject()">Erstellen</button>
     </div>
   </div>
 </div>
 
-<!-- FILE INPUTS -->
-<input type="file" id="fileSoll" accept=".xlsx,.xls" style="display:none" onchange="processFile(event,'soll')">
-<input type="file" id="fileIst"  accept=".xlsx,.xls" style="display:none" onchange="processFile(event,'ist')">
-
-<!-- TOAST -->
+<input type="file" id="fSoll" accept=".xlsx,.xls" style="display:none" onchange="loadFile(event,'soll')">
+<input type="file" id="fIst"  accept=".xlsx,.xls" style="display:none" onchange="loadFile(event,'ist')">
 <div id="toast"></div>
 
 <script>
-// ─── STATE ───────────────────────────────────────────────────────────────────
-let S = {
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+const S = {
   projects: {},
   activeId: null,
-  filterText: '',
-  selGroups: [],
-  selProfiles: [],
-  selGrades: [],
-  selLevels: [],
-  selectedIds: new Set(),
-  bulkGrade: '', bulkLength: '', bulkLevel: '', bulkComment: ''
+  ft: '',           // filter text
+  fg: [],           // filter groups
+  fp: [],           // filter profiles
+  fgr: [],          // filter grades
+  fl: [],           // filter levels
+  sel: new Set(),   // selected item ids
+  bGrade:'', bLen:'', bLevel:'', bComment:''
 };
 
-// ─── PERSIST ─────────────────────────────────────────────────────────────────
-function save() { try { localStorage.setItem('stahlbau_v40', JSON.stringify(S.projects)); } catch(e){} }
-function load() {
+// ═══════════════════════════════════════════════════════════
+//  PERSIST
+// ═══════════════════════════════════════════════════════════
+function save() {
+  try { localStorage.setItem('sb_v50', JSON.stringify(S.projects)); } catch(e){}
+}
+function loadStorage() {
   try {
-    const d = localStorage.getItem('stahlbau_v40');
-    if (d) {
-      S.projects = JSON.parse(d);
-      // Altdaten-Bereinigung
-      for (const p of Object.values(S.projects)) {
-        if (p.allItems) p.allItems = p.allItems.filter(i => !i.isSubtotal);
-      }
-      const pids = Object.keys(S.projects);
-      if (pids.length) S.activeId = pids[pids.length - 1];
-    }
+    const d = localStorage.getItem('sb_v50');
+    if (!d) return;
+    S.projects = JSON.parse(d);
+    // cleanup legacy subtotal rows
+    for (const p of Object.values(S.projects))
+      if (p.allItems) p.allItems = p.allItems.filter(i => !i.isSubtotal);
+    const ids = Object.keys(S.projects);
+    if (ids.length) S.activeId = ids[ids.length - 1];
   } catch(e) {}
 }
 
-// ─── PROFILE GROUP ───────────────────────────────────────────────────────────
-function detectGroup(profile) {
-  if (!profile) return 'Sonstiges';
-  const p = profile.toString().toUpperCase().trim();
-  if (/^BLECH|^PL|^FL/.test(p)) return 'Bleche';
-  if (/^HEA|^HIA/.test(p)) return 'HEA';
-  if (/^HEB|^HIB/.test(p)) return 'HEB';
-  if (/^HEM|^HIM/.test(p)) return 'HEM';
-  if (/^IPE/.test(p)) return 'IPE';
-  if (/^U[0-9]|^UPE|^UNP/.test(p)) return 'U-Profile';
-  if (/^ROR|^RHS|^SHS|^CHS|^ROHR/.test(p)) return 'Rohre';
-  if (/^L[0-9]|^WIN/.test(p)) return 'Winkelstahl';
-  if (/^T[0-9]/.test(p)) return 'T-Stahl';
-  if (/^FLACH|^FB/.test(p)) return 'Flachstahl';
-  if (/^RUND|^RD/.test(p)) return 'Rundstahl';
-  return 'Sonstiges';
-}
-
-// ─── NUMBER HELPERS ───────────────────────────────────────────────────────────
-function parseNum(v) {
-  if (v === undefined || v === null || v === '') return 0;
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+function pn(v) {
+  if (v===undefined||v===null||v==='') return 0;
   const n = parseFloat(String(v).replace(/\s/g,'').replace(',','.'));
   return isNaN(n) ? 0 : n;
 }
 function fmt(v, d=3) {
   if (typeof v !== 'number' || isNaN(v)) return '—';
-  return v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+  return v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+function fmtN(v,d=0) {
+  if (typeof v !== 'number' || isNaN(v)) return '—';
+  return v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+function grp(profile) {
+  if (!profile) return 'Sonstiges';
+  const p = profile.toUpperCase().trim();
+  if (/^(BLECH|PL|FL)/.test(p)) return 'Bleche';
+  if (/^HEA/.test(p)) return 'HEA';
+  if (/^HEB/.test(p)) return 'HEB';
+  if (/^HEM/.test(p)) return 'HEM';
+  if (/^IPE/.test(p)) return 'IPE';
+  if (/^(U[0-9]|UPE|UNP)/.test(p)) return 'U-Profile';
+  if (/^(ROR|RHS|SHS|CHS|ROHR)/.test(p)) return 'Rohre';
+  if (/^(L[0-9]|WIN)/.test(p)) return 'Winkelstahl';
+  if (/^T[0-9]/.test(p)) return 'T-Stahl';
+  if (/^(FLACH|FB)/.test(p)) return 'Flachstahl';
+  if (/^(RUND|RD)/.test(p)) return 'Rundstahl';
+  return 'Sonstiges';
 }
 
-// ─── XLSX PARSER ─────────────────────────────────────────────────────────────
-function matchCol(headers, patterns) {
-  for (const p of patterns) {
-    const re = new RegExp(p, 'i');
-    const idx = headers.findIndex(h => re.test(String(h||'').replace(/:$/,'').trim()));
-    if (idx >= 0) return idx;
+// Berechne Ist-Werte für eine Position
+// Logik: Ist-Gewicht = Soll-Gewicht-Gesamt × (Ist-Stk / Soll-Stk)
+// Wenn zusätzlich eine andere Ist-Länge eingetragen → weiterer Faktor
+function calcIst(item, d) {
+  const istQty = d?.istQty ?? null;
+  if (istQty === null) return { istQty:null, istWgt:null, istArea:null, dWgt:null, dArea:null };
+  const istLen  = d?.manualLength || item.len;
+  const qF      = item.qty > 0 ? istQty / item.qty : 0;
+  const lF      = (item.len > 0 && istLen > 0) ? istLen / item.len : 1;
+  const factor  = qF * lF;
+  const istWgt  = item.wgtSum * factor;
+  const istArea = item.areaSum * factor;
+  return { istQty, istWgt, istArea, dWgt: istWgt - item.wgtSum, dArea: istArea - item.areaSum };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  XLSX PARSER
+// ═══════════════════════════════════════════════════════════
+function mcol(headers, pats) {
+  for (const pat of pats) {
+    const re = new RegExp(pat, 'i');
+    const i = headers.findIndex(h => re.test(String(h||'').replace(/:$/,'').trim()));
+    if (i >= 0) return i;
   }
   return -1;
 }
-
 function parseXLSX(data) {
-  const wb = XLSX.read(data, { type: 'array' });
+  const wb = XLSX.read(data, {type:'array'});
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', blankrows: false });
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', blankrows:false});
   const kw = /profil|profile|grade|güte|qty|stück|length|länge|weight|gewicht|area|fläche|comment|bemerk|level|ebene/i;
-  let bestRow = -1, bestScore = 0;
-  for (let i = 0; i < Math.min(25, rows.length); i++) {
-    const score = rows[i].filter(c => typeof c === 'string' && kw.test(String(c))).length;
-    if (score > bestScore) { bestScore = score; bestRow = i; }
+  let bestRow=-1, bestScore=0;
+  for (let i=0; i<Math.min(25,rows.length); i++) {
+    const score = rows[i].filter(c=>typeof c==='string'&&kw.test(c)).length;
+    if (score>bestScore){bestScore=score;bestRow=i;}
   }
-  if (bestRow < 0) return null;
-  const headers = rows[bestRow].map(h => String(h||'').trim().replace(/:$/,''));
-  const col = {
-    profile: matchCol(headers, ['profil','profile','bauteil','bezeich','description']),
-    grade:   matchCol(headers, ['grade','güte','stahl','quality','material']),
-    qty:     matchCol(headers, ['qty','stück','stueck','menge','anz','pcs']),
-    len:     matchCol(headers, ['^length \\[mm\\]','^länge \\[mm\\]','length$','länge$']),
-    lenSum:  matchCol(headers, ['length sum','länge gesamt','sum.*length','sum.*länge']),
-    wgt:     matchCol(headers, ['^weight \\[kg\\]','^gewicht \\[kg\\]','weight$','gewicht$']),
-    wgtSum:  matchCol(headers, ['weight sum','sum.*weight','gewicht.*sum','gesamtgewicht','total.*weight']),
-    area:    matchCol(headers, ['^area \\[m','^fläche \\[m','area$','fläche$']),
-    areaSum: matchCol(headers, ['area sum','sum.*area','fläche.*sum','gesamtfläche']),
-    comment: matchCol(headers, ['comment','bemerk','notiz','remark']),
-    level:   matchCol(headers, ['level','ebene','nivelle','geschoss','etage','floor'])
+  if (bestRow<0) return null;
+  const h = rows[bestRow].map(c=>String(c||'').trim().replace(/:$/,''));
+  const c = {
+    pro: mcol(h,['profil','profile','bauteil','bezeich','description']),
+    grd: mcol(h,['grade','güte','stahl','quality','material']),
+    qty: mcol(h,['qty','stück','stueck','menge','anz','pcs']),
+    len: mcol(h,['^length \\[mm\\]','^länge \\[mm\\]','length$','länge$']),
+    lns: mcol(h,['length sum','sum.*length','länge.*sum','sum.*länge']),
+    wgt: mcol(h,['^weight \\[kg\\]','^gewicht \\[kg\\]','weight$','gewicht$']),
+    wgs: mcol(h,['weight sum','sum.*weight','gewicht.*sum','gesamtgewicht']),
+    are: mcol(h,['^area \\[m','^fläche \\[m','area$','fläche$']),
+    ars: mcol(h,['area sum','sum.*area','fläche.*sum','gesamtfläche']),
+    com: mcol(h,['comment','bemerk','notiz','remark']),
+    lev: mcol(h,['level','ebene','nivelle','geschoss','etage','floor'])
   };
-  if (col.profile < 0) return null;
-  const items = [];
-  for (let i = bestRow + 1; i < rows.length; i++) {
-    const r = rows[i];
-    const rawProfile = String(r[col.profile]||'').trim();
-    if (!rawProfile) continue;
-    if (/^(title|date|rev|page|projekt)/i.test(rawProfile)) continue;
-    if (/sub.?total|gesamt|summe|^total/i.test(rawProfile)) continue;
-    if (r.some(c => /^\s*total\s*:/i.test(String(c||'')))) continue;
-    const qty    = parseNum(r[col.qty]);
-    const len    = parseNum(r[col.len]);
-    const wgt    = parseNum(r[col.wgt]);
-    const wgtSum = parseNum(r[col.wgtSum]) || (qty * wgt);
-    const area   = parseNum(r[col.area]);
-    const areaSum= parseNum(r[col.areaSum]) || (qty * area);
-    if (wgtSum === 0 && qty === 0) continue;
+  if (c.pro<0) return null;
+  const items=[];
+  for (let i=bestRow+1; i<rows.length; i++) {
+    const r=rows[i];
+    const rawP=String(r[c.pro]||'').trim();
+    if (!rawP) continue;
+    if (/^(title|date|rev|page|projekt)/i.test(rawP)) continue;
+    if (/sub.?total|gesamt|summe|^total/i.test(rawP)) continue;
+    if (r.some(x=>/^\s*total\s*:/i.test(String(x||'')))) continue;
+    const qty=pn(r[c.qty]), len=pn(r[c.len]), wgt=pn(r[c.wgt]);
+    const wgtSum=pn(r[c.wgs])||(qty*wgt);
+    const area=pn(r[c.are]);
+    const areaSum=pn(r[c.ars])||(qty*area);
+    if (wgtSum===0&&qty===0) continue;
     items.push({
-      id: `${rawProfile}||${String(r[col.grade]||'').trim()}||${len}||${qty}||${i}`,
-      profile: rawProfile,
-      grade:   col.grade >= 0 ? String(r[col.grade]||'').trim() : '',
-      qty, len,
-      lenSum:  parseNum(r[col.lenSum]) || (qty * len),
+      id:`${rawP}||${String(r[c.grd]||'').trim()}||${len}||${qty}||${i}`,
+      profile:rawP, grade:String(r[c.grd]||'').trim(),
+      qty, len, lenSum:pn(r[c.lns])||(qty*len),
       wgt, wgtSum, area, areaSum,
-      comment: col.comment >= 0 ? String(r[col.comment]||'').trim() : '',
-      level:   col.level   >= 0 ? String(r[col.level]  ||'').trim() : '',
-      group:   detectGroup(rawProfile)
+      comment:c.com>=0?String(r[c.com]||'').trim():'',
+      level:c.lev>=0?String(r[c.lev]||'').trim():'',
+      group:grp(rawP)
     });
   }
-  return items;
+  return items.length ? items : null;
 }
 
-// ─── FILE HANDLER ─────────────────────────────────────────────────────────────
-function processFile(e, mode) {
-  const file = e.target.files[0];
-  if (!file || !S.activeId) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const items = parseXLSX(new Uint8Array(ev.target.result));
-    if (!items || !items.length) { showToast('Keine Daten erkannt', 'err'); return; }
-    const p = S.projects[S.activeId];
-    if (mode === 'soll') {
-      p.allItems = [...(p.allItems||[]), ...items];
-      p.lists = [...(p.lists||[]), { filename: file.name, date: new Date().toLocaleDateString('de-DE'), itemCount: items.length }];
-      showToast(`✓ ${items.length} Positionen geladen`, 'ok');
+// ═══════════════════════════════════════════════════════════
+//  FILE HANDLER
+// ═══════════════════════════════════════════════════════════
+function loadFile(e, mode) {
+  const file=e.target.files[0];
+  if (!file||!S.activeId) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const items=parseXLSX(new Uint8Array(ev.target.result));
+    if (!items){toast('Keine Daten erkannt — Spaltenüberschriften prüfen','err');return;}
+    const p=S.projects[S.activeId];
+    if (mode==='soll'){
+      p.allItems=[...(p.allItems||[]),...items];
+      p.lists=[...(p.lists||[]),{filename:file.name,date:new Date().toLocaleDateString('de-DE'),count:items.length}];
+      toast(`✓ ${items.length} Positionen geladen`,'ok');
     } else {
-      items.forEach(it => {
-        if (!p.istData[it.id]) p.istData[it.id] = {};
-        p.istData[it.id].istQty = it.qty;
-        if (it.len > 0) p.istData[it.id].manualLength = it.len;
+      items.forEach(it=>{
+        if (!p.istData[it.id]) p.istData[it.id]={};
+        p.istData[it.id].istQty=it.qty;
+        if (it.len>0) p.istData[it.id].manualLength=it.len;
       });
-      showToast(`✓ Ist-Mengen: ${items.length} Positionen`, 'ok');
+      toast(`✓ Ist-Mengen: ${items.length} Positionen`,'ok');
     }
     save(); render();
   };
   reader.readAsArrayBuffer(file);
-  e.target.value = '';
+  e.target.value='';
 }
 
-// ─── PROJECT MANAGEMENT ───────────────────────────────────────────────────────
-function openModal() { document.getElementById('modalOverlay').style.display='flex'; document.getElementById('inp-nr').value=''; document.getElementById('inp-name').value=''; setTimeout(()=>document.getElementById('inp-nr').focus(),50); }
-function closeModal() { document.getElementById('modalOverlay').style.display='none'; }
-function createProject() {
-  const nr = document.getElementById('inp-nr').value.trim();
-  const name = document.getElementById('inp-name').value.trim();
-  if (!nr && !name) return;
-  const id = Date.now().toString();
-  S.projects[id] = { id, nr, name, lists:[], istData:{}, allItems:[], created: new Date().toLocaleDateString('de-DE') };
-  S.activeId = id;
+// ═══════════════════════════════════════════════════════════
+//  PROJECT MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function openModal(){
+  document.getElementById('modal').style.display='flex';
+  document.getElementById('mnr').value='';
+  document.getElementById('mname').value='';
+  setTimeout(()=>document.getElementById('mnr').focus(),50);
+}
+function closeModal(){document.getElementById('modal').style.display='none';}
+function createProject(){
+  const nr=document.getElementById('mnr').value.trim();
+  const name=document.getElementById('mname').value.trim();
+  if (!nr&&!name) return;
+  const id=Date.now().toString();
+  S.projects[id]={id,nr,name,lists:[],istData:{},allItems:[],created:new Date().toLocaleDateString('de-DE')};
+  S.activeId=id; S.sel=new Set(); S.fg=[]; S.fp=[]; S.fgr=[]; S.fl=[]; S.ft='';
   save(); closeModal(); render();
 }
-function deleteProject(id) {
-  if (!confirm(`Projekt löschen?`)) return;
+function selectProject(id){
+  S.activeId=id; S.sel=new Set(); S.fg=[]; S.fp=[]; S.fgr=[]; S.fl=[]; S.ft='';
+  render();
+}
+function deleteProject(id){
+  if (!confirm('Projekt und alle Daten löschen?')) return;
   delete S.projects[id];
-  if (S.activeId === id) S.activeId = Object.keys(S.projects)[0] || null;
+  if (S.activeId===id) S.activeId=Object.keys(S.projects)[0]||null;
   save(); render();
 }
-function selectProject(id) { S.activeId = id; S.selGroups=[]; S.selProfiles=[]; S.selGrades=[]; S.selLevels=[]; S.filterText=''; S.selectedIds=new Set(); render(); }
+function deleteActiveProject(){
+  if (S.activeId) deleteProject(S.activeId);
+}
 
-// ─── IST DATA ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  IST DATA — sofortige Neuberechnung der Tabellenzeile
+// ═══════════════════════════════════════════════════════════
 function setIstQty(itemId, val) {
-  const p = S.projects[S.activeId];
-  if (!p.istData[itemId]) p.istData[itemId] = {};
-  if (val === '' || val === null) delete p.istData[itemId].istQty;
-  else p.istData[itemId].istQty = parseNum(val);
-  save(); updateStats();
-}
-function setManualField(itemId, field, val) {
-  const p = S.projects[S.activeId];
-  if (!p.istData[itemId]) p.istData[itemId] = {};
-  if (field === 'manualLength') { const n = parseNum(val); p.istData[itemId][field] = n > 0 ? n : undefined; }
-  else p.istData[itemId][field] = val;
+  const p=S.projects[S.activeId];
+  if (!p.istData[itemId]) p.istData[itemId]={};
+  if (val===''||val===null) delete p.istData[itemId].istQty;
+  else p.istData[itemId].istQty=pn(val);
   save();
+  refreshRow(itemId);
+  refreshStats();
+}
+function setField(itemId, field, val) {
+  const p=S.projects[S.activeId];
+  if (!p.istData[itemId]) p.istData[itemId]={};
+  if (field==='manualLength'){const n=pn(val);p.istData[itemId][field]=n>0?n:undefined;}
+  else p.istData[itemId][field]=val;
+  save();
+  if (field==='manualLength'){refreshRow(itemId);refreshStats();}
 }
 
-// ─── FILTER HELPERS ───────────────────────────────────────────────────────────
-function toggleFilter(arr, val) {
-  const idx = arr.indexOf(val);
-  if (idx >= 0) arr.splice(idx, 1); else arr.push(val);
+// Aktualisiert nur die berechneten Zellen einer Zeile (schnell, kein Neubau)
+function refreshRow(itemId) {
+  const p=S.projects[S.activeId];
+  if (!p) return;
+  const item=(p.allItems||[]).find(i=>i.id===itemId);
+  if (!item) return;
+  const row=document.querySelector(`tr[data-id="${CSS.escape(itemId)}"]`);
+  if (!row) return;
+  const d=p.istData[itemId]||{};
+  const {istQty,istWgt,istArea,dWgt,dArea}=calcIst(item,d);
+  const istLen=d.manualLength||item.len;
+  const cLenSum=istQty!==null?(istQty*istLen):(item.qty*item.len);
+
+  const cells=row.querySelectorAll('td');
+  // col 6 = Länge(G), col 12 = Gew.Ist, col 13 = Diff.Gew, col 14 = Fläche.Ist, col 15 = Diff.Fläche
+  cells[6].textContent = fmtN(cLenSum,0);
+  cells[6].className = istQty!==null ? 'r gl' : 'r dim';
+
+  cells[12].textContent = istWgt!==null ? fmt(istWgt,3) : '—';
+  cells[12].className = 'r grn gbg';
+
+  // Differenz Gewicht
+  cells[13].textContent = dWgt!==null ? ((dWgt>0?'+':'')+fmt(dWgt,3)) : '—';
+  cells[13].className = 'r ' + (dWgt===null?'dim': Math.abs(dWgt)<0.0005?'dim':dWgt<0?'neg':'pos');
+
+  // Fläche Ist
+  if (cells[14]) {
+    cells[14].textContent = istArea!==null ? fmt(istArea,3) : '—';
+    cells[14].className = 'r blu gbg';
+  }
+  // Differenz Fläche
+  if (cells[15]) {
+    cells[15].textContent = dArea!==null ? ((dArea>0?'+':'')+fmt(dArea,3)) : '—';
+    cells[15].className = 'r ' + (dArea===null?'dim':Math.abs(dArea)<0.000001?'dim':dArea<0?'neg':'pos');
+  }
 }
-function getFilteredItems() {
-  const p = S.projects[S.activeId];
+
+// ═══════════════════════════════════════════════════════════
+//  STATS
+// ═══════════════════════════════════════════════════════════
+function getFiltered() {
+  const p=S.projects[S.activeId];
   if (!p) return [];
-  let items = p.allItems || [];
-  if (S.selGroups.length)   items = items.filter(i => S.selGroups.includes(detectGroup(i.profile)));
-  if (S.selProfiles.length) items = items.filter(i => S.selProfiles.includes(i.profile));
-  if (S.selGrades.length)   items = items.filter(i => S.selGrades.includes(p.istData[i.id]?.manualGrade || i.grade || '---'));
-  if (S.selLevels.length)   items = items.filter(i => S.selLevels.includes(p.istData[i.id]?.manualLevel || i.level || '[Ohne Ebene]'));
-  if (S.filterText) {
-    const q = S.filterText.toLowerCase();
-    items = items.filter(i =>
-      i.profile.toLowerCase().includes(q) ||
-      i.grade.toLowerCase().includes(q) ||
-      (p.istData[i.id]?.manualGrade||'').toLowerCase().includes(q) ||
-      (i.level||'').toLowerCase().includes(q) ||
-      (p.istData[i.id]?.manualLevel||'').toLowerCase().includes(q) ||
-      (p.istData[i.id]?.manualComment||'').toLowerCase().includes(q)
+  let items=p.allItems||[];
+  if (S.fg.length) items=items.filter(i=>S.fg.includes(i.group));
+  if (S.fp.length) items=items.filter(i=>S.fp.includes(i.profile));
+  if (S.fgr.length) items=items.filter(i=>S.fgr.includes(p.istData[i.id]?.manualGrade||i.grade||'---'));
+  if (S.fl.length) items=items.filter(i=>S.fl.includes(p.istData[i.id]?.manualLevel||i.level||'[Ohne Ebene]'));
+  if (S.ft) {
+    const q=S.ft.toLowerCase();
+    items=items.filter(i=>
+      i.profile.toLowerCase().includes(q)||
+      i.grade.toLowerCase().includes(q)||
+      (p.istData[i.id]?.manualGrade||'').toLowerCase().includes(q)||
+      (i.level||'').toLowerCase().includes(q)||
+      (p.istData[i.id]?.manualLevel||'').toLowerCase().includes(q)||
+      (p.istData[i.id]?.manualComment||'').toLowerCase().includes(q)||
+      (i.comment||'').toLowerCase().includes(q)
     );
   }
   return items;
 }
-
 function calcStats(items) {
-  const p = S.projects[S.activeId];
-  let sW=0, sA=0, iW=0, iA=0, eP=0, swComp=0, saComp=0;
-  items.forEach(i => {
-    sW += i.wgtSum; sA += i.areaSum;
-    const d = p.istData[i.id];
-    const istQty = d?.istQty ?? null;
-    if (istQty !== null) {
-      eP++;
-      const cLen = d?.manualLength || i.len;
-      const qF = istQty / Math.max(i.qty, 1);
-      const lF = (i.len > 0 && cLen > 0) ? (cLen / i.len) : 1;
-      const factor = qF * lF;
-      iW += i.wgtSum * factor; iA += i.areaSum * factor;
-      swComp += i.wgtSum; saComp += i.areaSum;
-    }
+  const p=S.projects[S.activeId];
+  let sW=0,sA=0,iW=0,iA=0,eP=0,swC=0,saC=0;
+  items.forEach(i=>{
+    sW+=i.wgtSum; sA+=i.areaSum;
+    const r=calcIst(i,p.istData[i.id]);
+    if (r.istQty!==null){eP++;iW+=r.istWgt;iA+=r.istArea;swC+=i.wgtSum;saC+=i.areaSum;}
   });
-  return { sW, sA, iW, iA, eP, total: items.length, dW: iW - swComp, dA: iA - saComp, prog: items.length ? eP/items.length*100 : 0 };
+  return {sW,sA,iW,iA,eP,total:items.length,dW:iW-swC,dA:iA-saC,prog:items.length?eP/items.length*100:0};
+}
+function refreshStats() {
+  const p=S.projects[S.activeId];
+  if (!p) return;
+  const items=getFiltered();
+  const st=calcStats(items);
+  const set=(id,val,sub,cls)=>{
+    const el=document.getElementById(id);
+    if (!el) return;
+    const sv=el.querySelector('.sv');
+    const ss=el.querySelector('.ss');
+    if (sv){sv.textContent=val;sv.className='sv'+(cls?' '+cls:'');}
+    if (ss&&sub!==undefined) ss.textContent=sub;
+  };
+  set('st-sw',fmt(st.sW,3),fmt(st.sW/1000,3)+' t');
+  set('st-sa',fmt(st.sA,3)+' m²','');
+  set('st-iw',fmt(st.iW,3),fmt(st.iW/1000,3)+' t','grn');
+  set('st-ia',fmt(st.iA,3)+' m²','','blu');
+  set('st-dw',(st.dW>0?'+':'')+fmt(st.dW,3)+' kg','',Math.abs(st.dW)<0.001?'':st.dW<0?'neg':'pos');
+  set('st-da',(st.dA>0?'+':'')+fmt(st.dA,3)+' m²','',Math.abs(st.dA)<0.00001?'':st.dA<0?'neg':'pos');
+  set('st-pr',fmt(st.prog,1)+'%',`${st.eP}/${st.total} Pos.`);
+  const pb=document.getElementById('prog-bar-fill');
+  if (pb) pb.style.width=Math.min(st.prog,100)+'%';
 }
 
-// ─── EXPORT ───────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════════
 function doExport(onlyDiff) {
-  const p = S.projects[S.activeId];
-  let items = getFilteredItems();
-  if (onlyDiff) items = items.filter(it => {
-    const d = p.istData[it.id];
-    const istQty = d?.istQty ?? null;
-    const istLen = d?.manualLength || it.len;
-    const istGrade = d?.manualGrade || it.grade;
-    return (istQty !== null && istQty !== it.qty) || istGrade !== it.grade || Math.abs(istLen - it.len) > 0.01;
+  const p=S.projects[S.activeId];
+  if (!p) return;
+  let items=getFiltered();
+  if (onlyDiff) items=items.filter(it=>{
+    const d=p.istData[it.id];
+    const r=calcIst(it,d);
+    if (r.istQty===null) return false;
+    const ig=d?.manualGrade||it.grade;
+    const il=d?.manualLength||it.len;
+    return Math.abs(r.dWgt)>0.0005||ig!==it.grade||Math.abs(il-it.len)>0.01;
   });
-  const r3 = n => Math.round(n*1000)/1000;
-  const rows = items.map(it => {
-    const d = p.istData[it.id];
-    const istQty = d?.istQty ?? 0;
-    const istLen = d?.manualLength || it.len;
-    const eqF = istQty / Math.max(it.qty, 1);
-    const elF = (it.len > 0 && istLen > 0) ? (istLen / it.len) : 1;
-    const factor = eqF * elF;
-    const istWgt = it.wgtSum * factor;
-    const istArea = it.areaSum * factor;
+  if (!items.length){toast('Keine Positionen zum Exportieren','err');return;}
+  const r3=n=>Math.round(n*1000)/1000;
+  const rows=items.map(it=>{
+    const d=p.istData[it.id]||{};
+    const r=calcIst(it,d);
+    const istQty=r.istQty??0, istWgt=r.istWgt??0, istArea=r.istArea??0;
+    const istLen=d.manualLength||it.len;
     return {
-      'Profil / Position': it.profile, 'Material (Soll)': it.grade, 'Material (Ist)': d?.manualGrade || it.grade,
-      'Länge Einzel Soll [mm]': r3(it.len), 'Länge Ist [mm]': r3(istLen), 'Länge Gesamt Soll [mm]': r3(it.lenSum),
-      'Stück (Soll)': it.qty, 'Stück (Ist)': istQty,
-      'Gewicht Soll [kg]': r3(it.wgtSum), 'Gewicht Ist [kg]': r3(istWgt), 'Gewicht Δ [kg]': r3(istWgt - it.wgtSum),
-      'Fläche Soll [m²]': r3(it.areaSum), 'Fläche Ist [m²]': r3(istArea), 'Fläche Δ [m²]': r3(istArea - it.areaSum),
-      'Ebene': d?.manualLevel || it.level || '', 'Kommentar': d?.manualComment || it.comment || ''
+      'Profil':it.profile,'Material Soll':it.grade,'Material Ist':d.manualGrade||it.grade,
+      'Länge Einzel Soll [mm]':r3(it.len),'Länge Ist [mm]':r3(istLen),'Länge Gesamt Soll [mm]':r3(it.lenSum),
+      'Stück Soll':it.qty,'Stück Ist':istQty,
+      'Gew. Soll [kg]':r3(it.wgtSum),'Gew. Ist [kg]':r3(istWgt),'Gew. Δ [kg]':r3(r.dWgt??0),
+      'Fläche Soll [m²]':r3(it.areaSum),'Fläche Ist [m²]':r3(istArea),'Fläche Δ [m²]':r3(r.dArea??0),
+      'Ebene':d.manualLevel||it.level||'','Kommentar':d.manualComment||it.comment||''
     };
   });
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, onlyDiff ? 'Abweichungen' : 'Gesamtliste');
-  XLSX.writeFile(wb, `${onlyDiff?'ABWEICHUNGEN':'EXPORT'}_${p.nr||p.name}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb2=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2,ws,onlyDiff?'Abweichungen':'Gesamtliste');
+  XLSX.writeFile(wb2,`${onlyDiff?'ABW':'EXPORT'}_${p.nr||p.name}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
-// ─── BULK ─────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  BULK
+// ═══════════════════════════════════════════════════════════
 function applyBulk() {
-  const p = S.projects[S.activeId];
-  S.selectedIds.forEach(id => {
-    if (!p.istData[id]) p.istData[id] = {};
-    if (S.bulkGrade  !== '') p.istData[id].manualGrade   = S.bulkGrade;
-    if (S.bulkLength !== '') p.istData[id].manualLength  = parseNum(S.bulkLength);
-    if (S.bulkLevel  !== '') p.istData[id].manualLevel   = S.bulkLevel;
-    if (S.bulkComment!== '') p.istData[id].manualComment = S.bulkComment;
+  const p=S.projects[S.activeId];
+  if (!p) return;
+  S.sel.forEach(id=>{
+    if (!p.istData[id]) p.istData[id]={};
+    if (S.bGrade!='') p.istData[id].manualGrade=S.bGrade;
+    if (S.bLen!='') p.istData[id].manualLength=pn(S.bLen);
+    if (S.bLevel!='') p.istData[id].manualLevel=S.bLevel;
+    if (S.bComment!='') p.istData[id].manualComment=S.bComment;
   });
-  S.selectedIds = new Set();
-  S.bulkGrade=''; S.bulkLength=''; S.bulkLevel=''; S.bulkComment='';
+  S.sel=new Set(); S.bGrade=''; S.bLen=''; S.bLevel=''; S.bComment='';
   save(); render();
 }
 
-// ─── TOAST ────────────────────────────────────────────────────────────────────
-function showToast(msg, type='ok') {
-  const t = document.getElementById('toast');
-  t.className = type==='ok' ? 'toast-ok' : 'toast-err';
-  t.textContent = msg;
-  t.style.display = 'block';
-  clearTimeout(t._t);
-  t._t = setTimeout(()=>{ t.style.display='none'; }, 3000);
+// ═══════════════════════════════════════════════════════════
+//  SELECTION
+// ═══════════════════════════════════════════════════════════
+function toggleSel(id){
+  if (S.sel.has(id)) S.sel.delete(id); else S.sel.add(id);
+  render();
+}
+function toggleAll(){
+  const items=getFiltered();
+  if (S.sel.size===items.length) S.sel=new Set();
+  else S.sel=new Set(items.map(i=>i.id));
+  render();
 }
 
-// ─── RENDER HELPERS ───────────────────────────────────────────────────────────
-function chk(checked) {
-  return `<span class="sel-box${checked?' checked':''}">✓</span>`;
+// ═══════════════════════════════════════════════════════════
+//  FILTER
+// ═══════════════════════════════════════════════════════════
+function tog(arr, val){const i=arr.indexOf(val);i>=0?arr.splice(i,1):arr.push(val);}
+function tgG(v){tog(S.fg,v);S.fp=[];render();}
+function tgP(v){tog(S.fp,v);render();}
+function tgGr(v){tog(S.fgr,v);render();}
+function tgL(v){tog(S.fl,v);render();}
+function tgSW(v){S.ft=v;renderTable();refreshStats();}
+function resetF(){S.fg=[];S.fp=[];S.fgr=[];S.fl=[];S.ft='';render();}
+
+// ═══════════════════════════════════════════════════════════
+//  KEYBOARD NAV (Enter → nächste Zeile)
+// ═══════════════════════════════════════════════════════════
+function navEnter(e,idx){
+  if (e.key!=='Enter') return;
+  e.preventDefault();
+  const inputs=document.querySelectorAll('input[data-ist]');
+  if (inputs[idx+1]){inputs[idx+1].focus();inputs[idx+1].select();}
 }
 
-function updateStats() {
-  const items = getFilteredItems();
-  const st = calcStats(items);
-  const p = S.projects[S.activeId];
-  if (!p) return;
-  const setCard = (id, val, sub) => {
-    const el = document.getElementById(id);
-    if (el) { el.querySelector('.sv').textContent = val; if (sub !== undefined) el.querySelector('.ss').textContent = sub; }
-  };
-  setCard('sc-sw', fmt(st.sW,3)+' kg', fmt(st.sW/1000,3)+' t');
-  setCard('sc-sa', fmt(st.sA,3)+' m²', '');
-  setCard('sc-iw', fmt(st.iW,3)+' kg', fmt(st.iW/1000,3)+' t');
-  setCard('sc-ia', fmt(st.iA,3)+' m²', '');
-  const dwEl = document.getElementById('sc-dw');
-  if (dwEl) {
-    dwEl.querySelector('.sv').textContent = fmt(st.dW,3)+' kg';
-    dwEl.querySelector('.sv').className = 'sv stat-value '+(Math.abs(st.dW)<0.001?'':'') + (st.dW<0?'neg':st.dW>0?'pos':'');
-  }
-  const daEl = document.getElementById('sc-da');
-  if (daEl) {
-    daEl.querySelector('.sv').textContent = fmt(st.dA,3)+' m²';
-    daEl.querySelector('.sv').className = 'sv stat-value '+(st.dA<0?'neg':st.dA>0?'pos':'');
-  }
-  setCard('sc-prog', fmt(st.prog,1)+'%', `${st.eP}/${st.total} Pos.`);
+// ═══════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════
+function toast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.className=type==='ok'?'tok':'ter'; t.textContent=msg; t.style.display='block';
+  clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',3000);
 }
 
-// ─── RENDER SIDEBAR ───────────────────────────────────────────────────────────
-function renderSidebar() {
-  const el = document.getElementById('projectList');
-  const pids = Object.keys(S.projects);
-  if (!pids.length) { el.innerHTML = `<div style="padding:20px 12px;font-size:11px;color:#444;">Noch keine Projekte. Klicke + Neu.</div>`; return; }
-  el.innerHTML = pids.map(id => {
-    const p = S.projects[id];
-    const active = id === S.activeId;
-    return `<div class="project-item${active?' active':''}" onclick="selectProject('${id}')">
-      <span class="pname">${p.nr?`[${p.nr}] `:''}${p.name}</span>
-      <button class="pdel" onclick="event.stopPropagation();deleteProject('${id}')" title="Löschen">✕</button>
+// ═══════════════════════════════════════════════════════════
+//  CHECKBOX HTML
+// ═══════════════════════════════════════════════════════════
+function cbHtml(on){return `<span class="cbx${on?' on':''}">✓</span>`;}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER SIDEBAR
+// ═══════════════════════════════════════════════════════════
+function renderSidebar(){
+  const el=document.getElementById('proj-list');
+  const ids=Object.keys(S.projects);
+  if (!ids.length){el.innerHTML=`<div style="padding:18px 12px;font-size:11px;color:#444">Noch keine Projekte.</div>`;return;}
+  el.innerHTML=ids.map(id=>{
+    const p=S.projects[id];
+    return `<div class="pi${id===S.activeId?' active':''}" onclick="selectProject('${id}')">
+      <span class="pn">${p.nr?`[${p.nr}] `:''}${p.name}</span>
+      <button class="pd" onclick="event.stopPropagation();deleteProject('${id}')" title="Projekt löschen">🗑</button>
     </div>`;
   }).join('');
 }
 
-// ─── RENDER MAIN ──────────────────────────────────────────────────────────────
-function render() {
-  renderSidebar();
-  const main = document.getElementById('mainArea');
-  const p = S.activeId ? S.projects[S.activeId] : null;
-  if (!p) {
-    main.innerHTML = `<div class="welcome"><div class="big-icon">🏗</div><h2>Projekt auswählen</h2></div>`;
-    return;
-  }
+// ═══════════════════════════════════════════════════════════
+//  RENDER TABLE ONLY (für Suche ohne vollen Rebuild)
+// ═══════════════════════════════════════════════════════════
+function renderTable(){
+  const p=S.projects[S.activeId];
+  if (!p) return;
+  const items=getFiltered();
+  const tbody=document.getElementById('tbody');
+  if (!tbody) return;
+  tbody.innerHTML=buildRows(items,p);
+}
 
-  const items = getFilteredItems();
-  const allItems = p.allItems || [];
-  const allGroups = [...new Set(allItems.map(i => detectGroup(i.profile)))].sort();
-  let profilePool = allItems;
-  if (S.selGroups.length) profilePool = allItems.filter(i => S.selGroups.includes(detectGroup(i.profile)));
-  const allProfiles = [...new Set(profilePool.map(i => i.profile))].sort();
-  const allGrades = [...new Set(allItems.map(i => p.istData[i.id]?.manualGrade || i.grade || '---'))].sort();
-  const allLevels = [...new Set(allItems.map(i => p.istData[i.id]?.manualLevel || i.level || '[Ohne Ebene]'))].sort((a,b)=>a==='[Ohne Ebene]'?-1:b==='[Ohne Ebene]'?1:a.localeCompare(b));
+function buildRows(items,p){
+  if (!items.length) return `<tr><td colspan="17" style="text-align:center;padding:40px;color:#444">Keine Positionen — Soll-Liste laden oder Filter anpassen</td></tr>`;
+  const selAll=S.sel.size===items.length&&items.length>0;
+  return items.map((item,idx)=>{
+    const d=p.istData[item.id]||{};
+    const {istQty,istWgt,istArea,dWgt,dArea}=calcIst(item,d);
+    const istLen=d.manualLength||item.len;
+    const cLenSum=istQty!==null?(istQty*istLen):(item.qty*item.len);
+    const sel=S.sel.has(item.id);
+    const mGrade=d.manualGrade??'';
+    const mLevel=d.manualLevel??item.level??'';
+    const mComment=d.manualComment??item.comment??'';
+    const mLen=d.manualLength??'';
+    const dWgtCls=dWgt===null?'r dim':Math.abs(dWgt)<0.0005?'r dim':dWgt<0?'r neg':'r pos';
+    const dAreCls=dArea===null?'r dim':Math.abs(dArea)<0.000001?'r dim':dArea<0?'r neg':'r pos';
 
-  const st = calcStats(items);
-  const selAll = S.selectedIds.size === items.length && items.length > 0;
-
-  // chip helper
-  const chip = (val, active, cls) => `<button class="chip${active?' '+cls:''}" onclick="${cls==='active-gold'?`tgGroup('${val}')`:(cls==='active-orange'?`tgGrade('${val}')`:(cls==='active-blue'?`tgLevel('${val}')`:``))}">${val}</button>`;
-  const chipP = (val, active) => `<button class="chip${active?' active-gold':''}" onclick="tgProfile('${val}')">${val}</button>`;
-
-  // Build table rows
-  const rows = items.map((item, idx) => {
-    const d = p.istData[item.id] || {};
-    const istQty = d.istQty ?? null;
-    const mLen = d.manualLength;
-    const cLen = mLen || item.len;
-    const cLenSum = (istQty !== null ? istQty : item.qty) * cLen;
-    const qtyF = istQty === null ? 0 : (istQty / Math.max(item.qty, 1));
-    const lenF = (item.len > 0 && cLen > 0) ? (cLen / item.len) : 1;
-    const factor = istQty === null ? 0 : qtyF * lenF;
-    const istWgt = item.wgtSum * factor;
-    const dWgt = istQty === null ? null : istWgt - item.wgtSum;
-    const sel = S.selectedIds.has(item.id);
-    const dWgtCls = dWgt === null ? 'muted num' : Math.abs(dWgt) < 0.0005 ? 'muted num' : dWgt < 0 ? 'neg num' : 'pos num';
-    const mGrade = d.manualGrade;
-    const mLevel = d.manualLevel;
-    const mComment = d.manualComment;
-
-    return `<tr class="${sel?'selected':''}" data-id="${item.id}">
-      <td><button class="sel-btn${sel?' active':''}" onclick="toggleSel('${item.id}')">${chk(sel)}</button></td>
-      <td class="bold-white">${item.profile}</td>
-      <td><span style="background:var(--bg);border:1px solid var(--border);padding:2px 7px;border-radius:4px;font-size:9px;font-family:monospace;color:#888;">${item.grade||'---'}</span></td>
-      <td><input class="cell-input blue-input" style="width:90px" value="${mGrade||''}" placeholder="${item.grade||'S...'}" onchange="setManualField('${item.id}','manualGrade',this.value)"></td>
-      <td class="num muted dark-bg">${fmt(item.len,0)}</td>
-      <td class="blue-bg"><input class="cell-input blue-input" style="width:75px;text-align:right" type="number" value="${mLen||''}" placeholder="${item.len}" onchange="setManualField('${item.id}','manualLength',this.value)"></td>
-      <td class="num gold dark-bg">${fmt(cLenSum,0)}</td>
-      <td class="num" style="color:#888">${item.qty}</td>
-      <td class="num muted dark-bg">${fmt(item.wgt,3)}</td>
-      <td class="num bold-white dark-bg">${fmt(item.wgtSum,3)}</td>
-      <td class="num blue">${fmt(item.areaSum,3)}</td>
-      <td class="green-bg"><input class="cell-input green-input" style="width:70px;text-align:right" type="number" data-nav-id="ist-qty" value="${istQty!==null?istQty:''}" placeholder="${item.qty}" onchange="setIstQty('${item.id}',this.value)" onkeydown="navEnter(event,${idx})"></td>
-      <td class="num green green-bg">${istQty!==null?fmt(istWgt,3):'—'}</td>
+    return `<tr class="${sel?'sel':''}" data-id="${item.id}">
+      <td><button class="cb" onclick="toggleSel('${item.id}')">${cbHtml(sel)}</button></td>
+      <td class="w">${item.profile}</td>
+      <td><span style="background:var(--bg);border:1px solid var(--bor);padding:2px 6px;border-radius:3px;font-size:9px;font-family:monospace;color:#888">${item.grade||'---'}</span></td>
+      <td class="bbg"><input class="ci blui" style="width:88px" value="${mGrade}" placeholder="${item.grade||'S...'}" onchange="setField('${item.id}','manualGrade',this.value)"></td>
+      <td class="r dim dbg">${fmtN(item.len,0)}</td>
+      <td class="bbg"><input class="ci blui" style="width:72px;text-align:right" type="number" value="${mLen}" placeholder="${item.len}" onchange="setField('${item.id}','manualLength',this.value)"></td>
+      <td class="${istQty!==null?'r gl dbg':'r dim dbg'}">${fmtN(cLenSum,0)}</td>
+      <td class="r" style="color:#777">${item.qty}</td>
+      <td class="r dim dbg">${fmt(item.wgt,3)}</td>
+      <td class="r w dbg">${fmt(item.wgtSum,3)}</td>
+      <td class="r blu">${fmt(item.areaSum,3)}</td>
+      <td class="gbg"><input class="ci grni" style="width:65px;text-align:right" type="number" data-ist="${idx}" value="${istQty!==null?istQty:''}" placeholder="${item.qty}" onchange="setIstQty('${item.id}',this.value)" onkeydown="navEnter(event,${idx})"></td>
+      <td class="r grn gbg">${istWgt!==null?fmt(istWgt,3):'—'}</td>
       <td class="${dWgtCls}">${dWgt!==null?((dWgt>0?'+':'')+fmt(dWgt,3)):'—'}</td>
-      <td><div class="cell-wrap" style="min-width:120px"><span class="icon">▤</span><input value="${mLevel||item.level||''}" placeholder="..." onchange="setManualField('${item.id}','manualLevel',this.value)" style="color:#a5b4fc;font-weight:700;font-size:10px;"></div></td>
-      <td><div class="cell-wrap" style="min-width:140px"><span class="icon">✎</span><input value="${mComment||item.comment||''}" placeholder="Notiz..." onchange="setManualField('${item.id}','manualComment',this.value)" style="color:#888;font-size:10px;"></div></td>
+      <td class="r blu gbg">${istArea!==null?fmt(istArea,3):'—'}</td>
+      <td class="${dAreCls}">${dArea!==null?((dArea>0?'+':'')+fmt(dArea,3)):'—'}</td>
+      <td><div class="cwrap" style="min-width:110px"><span class="icon">▤</span><input value="${mLevel}" placeholder="Ebene..." style="color:#a5b4fc;font-weight:700" onchange="setField('${item.id}','manualLevel',this.value)"></div></td>
+      <td><div class="cwrap" style="min-width:130px"><span class="icon">✎</span><input value="${mComment}" placeholder="Notiz..." style="color:#888" onchange="setField('${item.id}','manualComment',this.value)"></div></td>
     </tr>`;
   }).join('');
+}
 
-  main.innerHTML = `
-    <div class="project-bar">
-      <div class="pnr">${p.nr?`Projekt ${p.nr}`:''}</div>
-      <h2>${p.name}</h2>
+// ═══════════════════════════════════════════════════════════
+//  RENDER MAIN
+// ═══════════════════════════════════════════════════════════
+function render(){
+  renderSidebar();
+  const main=document.getElementById('main');
+  const p=S.activeId?S.projects[S.activeId]:null;
+  if (!p){
+    main.innerHTML=`<div id="welcome"><div class="wi">🏗</div><h2>Projekt auswählen</h2></div>`;
+    return;
+  }
+  const items=getFiltered();
+  const allItems=p.allItems||[];
+  const st=calcStats(items);
+  const selAll=S.sel.size===items.length&&items.length>0;
+
+  // Build filter options
+  const allGrps=[...new Set(allItems.map(i=>i.group))].sort();
+  let pool=allItems; if (S.fg.length) pool=allItems.filter(i=>S.fg.includes(i.group));
+  const allProfs=[...new Set(pool.map(i=>i.profile))].sort();
+  const allGrades=[...new Set(allItems.map(i=>p.istData[i.id]?.manualGrade||i.grade||'---'))].sort();
+  const allLevels=[...new Set(allItems.map(i=>p.istData[i.id]?.manualLevel||i.level||'[Ohne Ebene]'))].sort((a,b)=>a==='[Ohne Ebene]'?-1:b==='[Ohne Ebene]'?1:a.localeCompare(b));
+
+  const chip=(label,arr,cls,fn)=>`<button class="chip${arr.includes(label)?' '+cls:''}" onclick="${fn}('${label.replace(/'/g,"\\'")}')">${label}</button>`;
+
+  main.innerHTML=`
+    <div id="pbar">
+      <div class="left">
+        <div class="nr">${p.nr?`Projekt ${p.nr}`:''}</div>
+        <h2>${p.name}</h2>
+      </div>
+      <div class="right">
+        <span style="font-size:10px;color:#555">${allItems.length} Pos. geladen</span>
+        <button class="btn btn-del" onclick="deleteActiveProject()">🗑 Projekt löschen</button>
+      </div>
     </div>
-    <div class="scroll-area">
 
-      <!-- STAT CARDS -->
-      <div class="stat-grid">
-        <div class="stat-card" id="sc-sw"><div class="stat-label">Soll-Gewicht</div><div class="sv stat-value">${fmt(st.sW,3)} kg</div><div class="ss stat-sub">${fmt(st.sW/1000,3)} t</div></div>
-        <div class="stat-card" id="sc-sa"><div class="stat-label">Soll-Fläche</div><div class="sv stat-value">${fmt(st.sA,3)} m²</div><div class="ss stat-sub"></div></div>
-        <div class="stat-card" id="sc-iw"><div class="stat-label">Ist-Gewicht</div><div class="sv stat-value green">${fmt(st.iW,3)} kg</div><div class="ss stat-sub">${fmt(st.iW/1000,3)} t</div></div>
-        <div class="stat-card" id="sc-ia"><div class="stat-label">Ist-Fläche</div><div class="sv stat-value blue">${fmt(st.iA,3)} m²</div><div class="ss stat-sub"></div></div>
-        <div class="stat-card" id="sc-dw"><div class="stat-label">Differenz kg</div><div class="sv stat-value ${st.dW<0?'neg':st.dW>0?'pos':''}">${fmt(st.dW,3)} kg</div><div class="ss stat-sub"></div></div>
-        <div class="stat-card" id="sc-da"><div class="stat-label">Differenz m²</div><div class="sv stat-value ${st.dA<0?'neg':st.dA>0?'pos':''}">${fmt(st.dA,3)} m²</div><div class="ss stat-sub"></div></div>
-        <div class="stat-card" id="sc-prog"><div class="stat-label">Fortschritt</div><div class="sv stat-value">${fmt(st.prog,1)}%</div><div class="ss stat-sub">${st.eP}/${st.total} Pos.</div></div>
+    <div id="scroll">
+
+      <div id="stats">
+        <div class="sc"><div class="sl">Soll-Gewicht</div><div class="sv" id="st-sw">${fmt(st.sW,3)}</div><div class="ss" id="st-sw-s">${fmt(st.sW/1000,3)} t</div></div>
+        <div class="sc"><div class="sl">Soll-Fläche</div><div class="sv" id="st-sa">${fmt(st.sA,3)} m²</div><div class="ss"></div></div>
+        <div class="sc"><div class="sl">Ist-Gewicht</div><div class="sv grn" id="st-iw">${fmt(st.iW,3)}</div><div class="ss">${fmt(st.iW/1000,3)} t</div></div>
+        <div class="sc"><div class="sl">Ist-Fläche</div><div class="sv blu" id="st-ia">${fmt(st.iA,3)} m²</div><div class="ss"></div></div>
+        <div class="sc"><div class="sl">Δ Gewicht</div><div class="sv ${Math.abs(st.dW)<0.001?'':st.dW<0?'neg':'pos'}" id="st-dw">${(st.dW>0?'+':'')+fmt(st.dW,3)} kg</div><div class="ss"></div></div>
+        <div class="sc"><div class="sl">Δ Fläche</div><div class="sv ${Math.abs(st.dA)<0.00001?'':st.dA<0?'neg':'pos'}" id="st-da">${(st.dA>0?'+':'')+fmt(st.dA,3)} m²</div><div class="ss"></div></div>
+        <div class="sc"><div class="sl">Fortschritt</div><div class="sv" id="st-pr">${fmt(st.prog,1)}%</div><div class="ss">${st.eP}/${st.total} Pos.</div></div>
       </div>
 
-      <!-- BULK BAR -->
-      ${S.selectedIds.size > 0 ? `
-      <div class="bulk-bar">
-        <span class="bulk-count">☑ ${S.selectedIds.size} markiert</span>
-        <input class="bulk-input" placeholder="Material..." value="${S.bulkGrade}" oninput="S.bulkGrade=this.value">
-        <input class="bulk-input" type="number" placeholder="Länge [mm]..." value="${S.bulkLength}" oninput="S.bulkLength=this.value">
-        <input class="bulk-input" placeholder="Ebene..." value="${S.bulkLevel}" oninput="S.bulkLevel=this.value">
-        <input class="bulk-input" placeholder="Kommentar..." value="${S.bulkComment}" oninput="S.bulkComment=this.value">
-        <button class="btn-bulk-apply" onclick="applyBulk()">Zuweisen</button>
-        <button class="btn-bulk-cancel" onclick="S.selectedIds=new Set();render()">Abbrechen</button>
-      </div>` : ''}
+      <div id="prog-bar-wrap"><div id="prog-bar-fill" style="width:${Math.min(st.prog,100)}%"></div></div>
 
-      <!-- ACTION BAR -->
-      <div class="action-bar">
-        <button class="btn btn-gold" onclick="document.getElementById('fileSoll').click()">▲ Soll-Liste laden</button>
-        <button class="btn btn-ghost" onclick="document.getElementById('fileIst').click()">▲ Ist-Mengen laden</button>
-        <button class="btn btn-export" onclick="doExport(false)">⬇ Excel Export</button>
+      ${S.sel.size>0?`
+      <div id="bulk">
+        <span class="bc">☑ ${S.sel.size} markiert</span>
+        <input class="bi" placeholder="Material..." value="${S.bGrade}" oninput="S.bGrade=this.value">
+        <input class="bi" type="number" placeholder="Länge [mm]..." value="${S.bLen}" oninput="S.bLen=this.value">
+        <input class="bi" placeholder="Ebene..." value="${S.bLevel}" oninput="S.bLevel=this.value">
+        <input class="bi" placeholder="Kommentar..." value="${S.bComment}" oninput="S.bComment=this.value">
+        <button class="bapply" onclick="applyBulk()">Zuweisen</button>
+        <button class="bcancel" onclick="S.sel=new Set();render()">Abbrechen</button>
+      </div>`:''}
+
+      <div id="abar">
+        <button class="btn btn-gold" onclick="document.getElementById('fSoll').click()">▲ Soll-Liste laden</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('fIst').click()">▲ Ist-Mengen laden</button>
+        <button class="btn btn-exp" onclick="doExport(false)">⬇ Excel Export</button>
         <button class="btn btn-abw" onclick="doExport(true)">⚠ Abweichungs-Export</button>
-        <div class="search-wrap">
-          <span style="color:#555;font-size:12px;">🔍</span>
-          <input placeholder="Suchen (Profil, Güte, Ebene, Kommentar...)" value="${S.filterText}" oninput="S.filterText=this.value;renderTable()">
+        <div id="sw">
+          <span style="color:#555;font-size:12px">🔍</span>
+          <input placeholder="Suchen (Profil, Güte, Ebene, Kommentar...)" value="${S.ft}" oninput="tgSW(this.value)">
         </div>
       </div>
 
-      <!-- FILTER BAR -->
-      <div class="filter-bar">
-        <div class="filter-section">
-          <div class="filter-title">1. Profil-Gruppen</div>
-          <div class="filter-chips">${allGroups.map(g=>`<button class="chip${S.selGroups.includes(g)?' active-gold':''}" onclick="tgGroup('${g}')">${g}</button>`).join('')}</div>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">2. Spezifische Profile</div>
-          <div class="filter-chips filter-scroll">${allProfiles.map(pr=>`<button class="chip${S.selProfiles.includes(pr)?' active-gold':''}" onclick="tgProfile('${pr}')">${pr}</button>`).join('')}</div>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">3. Material (Güte)</div>
-          <div class="filter-chips filter-scroll">${allGrades.map(g=>`<button class="chip${S.selGrades.includes(g)?' active-orange':''}" onclick="tgGrade('${g}')">${g}</button>`).join('')}</div>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">4. Ebene / Höhe</div>
-          <div class="filter-chips filter-scroll">${allLevels.map(l=>`<button class="chip${S.selLevels.includes(l)?' active-blue':''}" onclick="tgLevel('${l}')">${l}</button>`).join('')}</div>
-        </div>
-        <div class="filter-footer">
-          <button class="btn-reset" onclick="resetFilters()">Filter zurücksetzen</button>
-        </div>
+      <div id="fbar">
+        <div><div class="ft">1. Profil-Gruppen</div><div class="fchips">${allGrps.map(g=>chip(g,S.fg,'cg','tgG')).join('')}</div></div>
+        <div><div class="ft">2. Spezifische Profile</div><div class="fchips fscroll">${allProfs.map(pr=>chip(pr,S.fp,'cg','tgP')).join('')}</div></div>
+        <div><div class="ft">3. Material / Güte</div><div class="fchips fscroll">${allGrades.map(g=>chip(g,S.fgr,'co','tgGr')).join('')}</div></div>
+        <div><div class="ft">4. Ebene / Höhe</div><div class="fchips fscroll">${allLevels.map(l=>chip(l,S.fl,'cb','tgL')).join('')}</div></div>
+        <div id="freset-row"><button class="btn-rst" onclick="resetF()">Filter zurücksetzen</button></div>
       </div>
 
-      <!-- TABLE -->
-      <div class="table-wrap">
-        <div class="table-scroll">
-          <table id="mainTable">
-            <thead>
-              <tr>
-                <th style="width:36px"><button class="sel-btn${selAll?' active':''}" onclick="toggleAll()">${chk(selAll)}</button></th>
-                <th style="width:160px">Profil / Position</th>
-                <th style="width:100px">Material (S)</th>
-                <th class="blue-h" style="width:100px">Material (I)</th>
-                <th class="num dark" style="width:90px">Länge (E)</th>
-                <th class="num blue-h" style="width:90px">Länge (I)</th>
-                <th class="num" style="width:90px">Länge (G)</th>
-                <th class="num" style="width:70px">Stück (S)</th>
-                <th class="num dark" style="width:90px">Wgt (E)</th>
-                <th class="num dark" style="width:90px">Wgt (G)</th>
-                <th class="num blue-h" style="width:90px">Fläche (G)</th>
-                <th class="num green-h" style="width:80px">Stück (I)</th>
-                <th class="num green-h" style="width:100px">Gew. Ist (G)</th>
-                <th class="num" style="width:90px">Differenz</th>
-                <th style="width:150px">Ebene / Höhe</th>
-                <th>Kommentar</th>
-              </tr>
-            </thead>
-            <tbody id="tableBody">${rows}</tbody>
-          </table>
-        </div>
-      </div>
+      <div id="twrap"><div id="tscroll">
+        <table id="tbl">
+          <thead><tr>
+            <th style="width:32px"><button class="cb" onclick="toggleAll()">${cbHtml(selAll)}</button></th>
+            <th style="width:150px">Profil</th>
+            <th style="width:90px">Material (S)</th>
+            <th class="bh" style="width:95px">Material (I)</th>
+            <th class="r dh" style="width:85px">Länge (E)</th>
+            <th class="r bh" style="width:85px">Länge (I)</th>
+            <th class="r" style="width:85px">Länge (G)</th>
+            <th class="r" style="width:65px">Stk (S)</th>
+            <th class="r dh" style="width:85px">Wgt (E)</th>
+            <th class="r dh" style="width:90px">Wgt (G)</th>
+            <th class="r bh" style="width:85px">Fläche (G)</th>
+            <th class="r gh" style="width:72px">Stk (I)</th>
+            <th class="r gh" style="width:95px">Gew. Ist (G)</th>
+            <th class="r" style="width:90px">Δ Gewicht</th>
+            <th class="r bh" style="width:85px">Fläche Ist</th>
+            <th class="r" style="width:85px">Δ Fläche</th>
+            <th style="width:140px">Ebene / Höhe</th>
+            <th>Kommentar</th>
+          </tr></thead>
+          <tbody id="tbody">${buildRows(items,p)}</tbody>
+        </table>
+      </div></div>
 
-    </div>
-  `;
+    </div>`;
 }
 
-// ─── FILTER TOGGLE FUNCTIONS ──────────────────────────────────────────────────
-function tgGroup(v)   { toggleFilter(S.selGroups, v); S.selProfiles=[]; renderTable(); }
-function tgProfile(v) { toggleFilter(S.selProfiles, v); renderTable(); }
-function tgGrade(v)   { toggleFilter(S.selGrades, v); renderTable(); }
-function tgLevel(v)   { toggleFilter(S.selLevels, v); renderTable(); }
-function resetFilters() { S.selGroups=[]; S.selProfiles=[]; S.selGrades=[]; S.selLevels=[]; S.filterText=''; render(); }
-
-function toggleSel(id) {
-  if (S.selectedIds.has(id)) S.selectedIds.delete(id); else S.selectedIds.add(id);
-  render();
-}
-function toggleAll() {
-  const items = getFilteredItems();
-  if (S.selectedIds.size === items.length) S.selectedIds = new Set();
-  else S.selectedIds = new Set(items.map(i => i.id));
-  render();
-}
-
-function navEnter(e, idx) {
-  if (e.key !== 'Enter') return;
-  e.preventDefault();
-  const inputs = document.querySelectorAll('input[data-nav-id="ist-qty"]');
-  if (inputs[idx+1]) { inputs[idx+1].focus(); inputs[idx+1].select(); }
-}
-
-// Fast re-render of table only (for search/filter without full rebuild)
-function renderTable() {
-  const p = S.projects[S.activeId];
-  if (!p) return;
-  const items = getFilteredItems();
-
-  // Update chips without full re-render
-  render();
-}
-
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-load();
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+loadStorage();
 render();
 </script>
 </body>
